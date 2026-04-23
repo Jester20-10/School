@@ -5,67 +5,61 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Совет Обучающихся</title>
   <style>
-    :root {
-      --primary: #4f46e5; --primary-hover: #4338ca;
-      --bg: #f8fafc; --card: #ffffff; --text: #0f172a; --muted: #64748b;
-      --success: #10b981; --danger: #ef4444; --radius: 14px;
-      --shadow: 0 4px 12px rgba(0,0,0,0.06);
-    }
+    :root { --primary: #4f46e5; --primary-hover: #4338ca; --bg: #f8fafc; --card: #ffffff; --text: #0f172a; --muted: #64748b; --radius: 14px; --shadow: 0 4px 12px rgba(0,0,0,0.06); }
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
     body { background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; }
     .hidden { display: none !important; }
     
-    header { background: var(--primary); color: white; padding: 1rem; text-align: center; position: sticky; top: 0; z-index: 10; display: flex; justify-content: space-between; align-items: center; }
-    header h1 { font-size: 1.15rem; font-weight: 600; }
-    .header-nav { display: flex; gap: 0.5rem; }
-    .header-nav button { background: rgba(255,255,255,0.2); border: none; color: white; padding: 0.5rem 0.8rem; border-radius: 8px; cursor: pointer; font-size: 0.9rem; }
+    header { background: var(--primary); color: white; padding: 0.8rem 1rem; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 10; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    header h1 { font-size: 1.1rem; font-weight: 600; }
+    .header-nav { display: flex; gap: 0.3rem; }
+    .tab-btn { background: transparent; border: 1px solid rgba(255,255,255,0.3); color: white; padding: 0.4rem 0.7rem; border-radius: 8px; cursor: pointer; font-size: 0.85rem; transition: 0.2s; }
+    .tab-btn:hover { background: rgba(255,255,255,0.15); }
+    .tab-btn.active { background: white; color: var(--primary); border-color: white; font-weight: 600; }
     
     main { flex: 1; padding: 1rem; max-width: 640px; margin: 0 auto; width: 100%; }
     .card { background: var(--card); border-radius: var(--radius); padding: 1.5rem; box-shadow: var(--shadow); margin-bottom: 1rem; }
-    
-    input, select, textarea { width: 100%; padding: 0.8rem; margin: 0.5rem 0 1rem; border: 1px solid #cbd5e1; border-radius: 10px; font-size: 1rem; background: #fff; }
+    input, textarea { width: 100%; padding: 0.8rem; margin: 0.5rem 0 1rem; border: 1px solid #cbd5e1; border-radius: 10px; font-size: 1rem; background: #fff; }
     button { width: 100%; padding: 0.85rem; border: none; border-radius: 10px; background: var(--primary); color: white; font-size: 1rem; cursor: pointer; transition: 0.2s; font-weight: 500; }
     button:hover { background: var(--primary-hover); }
     button.secondary { background: #e2e8f0; color: var(--text); margin-top: 0.5rem; }
-    button.danger { background: var(--danger); }
+    button.danger { background: #ef4444; }
+    button.danger:hover { background: #dc2626; }
     
-    .poll-item { cursor: pointer; border-left: 4px solid var(--primary); transition: 0.2s; }
-    .poll-item:hover { background: #f1f5f9; }
-    .badge { display: inline-block; padding: 0.2rem 0.6rem; border-radius: 99px; font-size: 0.7rem; font-weight: 700; margin-right: 0.4rem; }
+    .list-item { background: white; border-radius: var(--radius); padding: 1rem; margin-bottom: 0.8rem; box-shadow: var(--shadow); border-left: 4px solid var(--primary); cursor: pointer; transition: 0.2s; }
+    .list-item:hover { transform: translateY(-2px); }
+    
+    .news-card { background: white; border-radius: var(--radius); padding: 1.2rem; margin-bottom: 0.8rem; box-shadow: var(--shadow); position: relative; }
+    .news-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem; }
+    .news-meta { font-size: 0.75rem; color: var(--muted); display: flex; gap: 0.5rem; align-items: center; }
+    .news-text { white-space: pre-wrap; line-height: 1.5; margin-bottom: 0.5rem; }
+    .delete-btn { position: absolute; top: 1rem; right: 1rem; background: transparent; color: #94a3b8; border: none; cursor: pointer; font-size: 1.2rem; padding: 0; width: auto; }
+    .delete-btn:hover { color: #ef4444; }
+    
+    .badge { display: inline-block; padding: 0.2rem 0.5rem; border-radius: 99px; font-size: 0.7rem; font-weight: 700; }
     .badge.admin { background: #fef3c7; color: #b45309; }
     .badge.council { background: #dbeafe; color: #1d4ed8; }
+    .badge.voted { background: #d1fae5; color: #047857; }
     
-    .profile-header { display: flex; gap: 1rem; align-items: center; margin-bottom: 1.5rem; }
-    .avatar { width: 80px; height: 80px; border-radius: 50%; object-fit: cover; background: #e2e8f0; border: 3px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-    .avatar-placeholder { display: flex; align-items: center; justify-content: center; background: #e0e7ff; color: var(--primary); font-size: 1.8rem; }
-    
-    .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; margin: 1rem 0; }
-    .stat-card { background: #f1f5f9; padding: 0.8rem; border-radius: 10px; text-align: center; }
-    .stat-card strong { display: block; font-size: 1.2rem; color: var(--primary); }
-    
-    .option { display: flex; align-items: center; padding: 0.9rem; border: 1px solid #e2e8f0; border-radius: 10px; margin: 0.5rem 0; cursor: pointer; transition: 0.2s; }
-    .option.selected { border-color: var(--primary); background: #eff6ff; }
-    .result-bar { height: 10px; background: #e2e8f0; border-radius: 5px; margin-top: 6px; overflow: hidden; }
-    .result-fill { height: 100%; background: var(--primary); transition: width 0.4s ease; }
-    
-    .alert { padding: 0.8rem; border-radius: 8px; margin-bottom: 1rem; font-size: 0.9rem; }
+    .alert { padding: 0.8rem; border-radius: 8px; margin-bottom: 1rem; font-size: 0.9rem; text-align: center; }
     .alert.error { background: #fee2e2; color: #b91c1c; }
     .alert.success { background: #d1fae5; color: #047857; }
-    
-    footer { text-align: center; padding: 1rem; font-size: 0.75rem; color: var(--muted); border-top: 1px solid #e2e8f0; margin-top: auto; }
+    footer { text-align: center; padding: 1rem; font-size: 0.75rem; color: var(--muted); }
   </style>
 </head>
 <body>
   <header>
     <h1>🗳️ Совет Обучающихся</h1>
-    <div class="header-nav hidden" id="nav-btns">
-      <button onclick="showScreen('profile-screen')">👤 Кабинет</button>
-      <button onclick="logout()">🚪 Выход</button>
-    </div>
+    <nav class="header-nav hidden" id="main-nav">
+      <button class="tab-btn active" id="btn-polls" onclick="switchTab('polls')">Опросы</button>
+      <button class="tab-btn" id="btn-news" onclick="switchTab('news')">Новости</button>
+      <button class="tab-btn" id="btn-profile" onclick="switchTab('profile')">Кабинет</button>
+      <button class="tab-btn" onclick="logout()">🚪</button>
+    </nav>
   </header>
 
   <main>
-    <!-- АВТОРИЗАЦИЯ / РЕГИСТРАЦИЯ -->
+    <!-- АВТОРИЗАЦИЯ -->
     <div id="auth-screen">
       <div class="card">
         <h2 style="margin-bottom: 1rem;">Вход в систему</h2>
@@ -73,7 +67,7 @@
         <input id="auth-pass" type="password" placeholder="Пароль">
         <button onclick="handleAuth()">Войти</button>
         <hr style="margin: 1.5rem 0; border: 0; border-top: 1px solid #e2e8f0;">
-        <h3>Регистрация (только для членов совета)</h3>
+        <h3>Регистрация (только члены совета)</h3>
         <input id="reg-login" placeholder="Придумайте логин">
         <input id="reg-pass" type="password" placeholder="Придумайте пароль">
         <button class="secondary" onclick="handleRegister()">Зарегистрироваться</button>
@@ -81,22 +75,51 @@
       </div>
     </div>
 
-    <!-- ГЛАВНАЯ -->
-    <div id="home-screen" class="hidden">
+    <!-- ОПРОСЫ -->
+    <div id="polls-screen" class="hidden">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1rem;">
         <h2>Активные опросы</h2>
-        <button id="btn-create" style="width:auto; display:none;" onclick="showScreen('create-screen')">+ Создать опрос</button>
+        <button id="btn-create-poll" style="width:auto; display:none;" onclick="showScreen('create-screen')">+ Создать</button>
       </div>
       <div id="polls-list"></div>
     </div>
 
-    <!-- СОЗДАНИЕ ОПРОСА -->
+    <!-- НОВОСТИ -->
+    <div id="news-screen" class="hidden">
+      <div class="card" id="news-form" style="display:none; margin-bottom: 1rem;">
+        <h3>📝 Добавить новость</h3>
+        <input id="news-title" placeholder="Заголовок">
+        <textarea id="news-content" rows="4" placeholder="Текст новости..."></textarea>
+        <button onclick="createNews()">Опубликовать</button>
+      </div>
+      <div id="news-list"></div>
+    </div>
+
+    <!-- ПРОФИЛЬ -->
+    <div id="profile-screen" class="hidden">
+      <div class="card">
+        <div style="display:flex; gap:1rem; align-items:center; margin-bottom:1.5rem;">
+          <div style="width:70px; height:70px; border-radius:50%; background:#e0e7ff; display:flex; align-items:center; justify-content:center; font-size:1.5rem; font-weight:bold; color:var(--primary);" id="profile-avatar"></div>
+          <div>
+            <h2 id="profile-name"></h2>
+            <span id="profile-role" class="badge"></span>
+          </div>
+        </div>
+        <div style="background:#f1f5f9; padding:1rem; border-radius:10px; margin-bottom:1rem;">
+          <p>📊 Статистика: <strong id="stat-voted">0</strong> голосов отдано</p>
+        </div>
+        <input id="display-name" placeholder="Отображаемое имя">
+        <button onclick="saveProfile()">Сохранить изменения</button>
+      </div>
+    </div>
+
+    <!-- СОЗДАНИЕ ОПРОСА (всплывающее) -->
     <div id="create-screen" class="hidden">
       <div class="card">
-        <button onclick="showScreen('home-screen')" class="secondary" style="width:auto; margin-bottom:1rem;">← Назад</button>
+        <button onclick="switchTab('polls')" class="secondary" style="width:auto; margin-bottom:1rem;">← Назад</button>
         <h2>Новый опрос</h2>
         <input id="poll-title" placeholder="Тема опроса">
-        <textarea id="poll-desc" rows="3" placeholder="Описание (необязательно)"></textarea>
+        <textarea id="poll-desc" rows="3" placeholder="Описание"></textarea>
         <div id="options-container">
           <input class="poll-opt" placeholder="Вариант 1">
           <input class="poll-opt" placeholder="Вариант 2">
@@ -107,149 +130,118 @@
       </div>
     </div>
 
-    <!-- ГОЛОСОВАНИЕ / РЕЗУЛЬТАТЫ -->
+    <!-- ГОЛОСОВАНИЕ (всплывающее) -->
     <div id="vote-screen" class="hidden">
       <div class="card">
-        <button onclick="showScreen('home-screen')" class="secondary" style="width: auto; margin-bottom: 1rem;">← Назад</button>
+        <button onclick="switchTab('polls')" class="secondary" style="width: auto; margin-bottom: 1rem;">← Назад</button>
         <h2 id="vote-title"></h2>
-        <p id="vote-desc" style="color: var(--muted); margin-bottom: 1rem;"></p>
+        <p id="vote-desc" style="color: var(--muted); margin: 0.5rem 0 1rem;"></p>
         <div id="vote-options"></div>
-        <div id="vote-result" class="hidden" style="margin-top: 1rem;"></div>
         <button id="vote-submit" onclick="submitVote()">Отправить голос</button>
-      </div>
-    </div>
-
-    <!-- ЛИЧНЫЙ КАБИНЕТ -->
-    <div id="profile-screen" class="hidden">
-      <div class="card">
-        <button onclick="showScreen('home-screen')" class="secondary" style="width:auto; margin-bottom:1rem;">← На главную</button>
-        <div class="profile-header">
-          <img id="profile-img" class="avatar avatar-placeholder" src="" alt="Аватар">
-          <div>
-            <h2 id="profile-name"></h2>
-            <span id="profile-role" class="badge"></span>
-            <p style="color:var(--muted); font-size:0.85rem; margin-top:0.3rem;" id="profile-date"></p>
-          </div>
-        </div>
-        
-        <div class="stat-grid">
-          <div class="stat-card"><strong id="stat-created">0</strong>Опросов создано</div>
-          <div class="stat-card"><strong id="stat-voted">0</strong>Голосов отдано</div>
-        </div>
-
-        <h3 style="margin: 1.5rem 0 0.5rem;">Настройки профиля</h3>
-        <label style="display:block; margin-bottom:0.5rem; font-weight:500;">Фото профиля</label>
-        <input type="file" id="photo-upload" accept="image/*" style="margin-bottom:1rem;">
-        <label style="display:block; margin-bottom:0.5rem; font-weight:500;">Отображаемое имя</label>
-        <input id="display-name" placeholder="Иван Иванов">
-        <button onclick="saveProfile()">Сохранить изменения</button>
       </div>
     </div>
   </main>
 
-  <footer>Школьная система голосования • Демо-версия (localStorage)</footer>
+  <footer>🔒 Демо-режим. Данные хранятся в браузере.</footer>
 
   <script>
-    // === БАЗА ДАННЫХ (localStorage) ===
+    // === БАЗА ДАННЫХ ===
     const DB = {
-      get: k => JSON.parse(localStorage.getItem(k) || '[]'),
-      set: (k, v) => localStorage.setItem(k, JSON.stringify(v)),
-      getUser: id => DB.get('users').find(u => u.id === id)
+      cache: { users: [], polls: [], votes: [], news: [] },
+      get(k) {
+        try {
+          const d = localStorage.getItem(k);
+          if (d) this.cache[k] = JSON.parse(d);
+        } catch {}
+        return this.cache[k];
+      },
+      set(k, v) {
+        this.cache[k] = v;
+        try { localStorage.setItem(k, JSON.stringify(v)); } catch {}
+      }
     };
 
-    // Инициализация: создаём админа по умолчанию, если его нет
-    if (!localStorage.getItem('users')) {
-      DB.set('users', [{
-        id: 'admin_01', login: 'Жопа', pass: 'Жопа123', role: 'admin',
-        displayName: 'Администратор Совета', createdAt: new Date().toISOString(), photo: null
-      }]);
+    // Инициализация
+    if (DB.get('users').length === 0) {
+      DB.set('users', [{ id: 'admin_01', login: 'admin', pass: 'admin123', role: 'admin', displayName: 'Администратор', createdAt: new Date().toISOString() }]);
     }
 
     let currentUser = null;
     let currentPollId = null;
 
     // === НАВИГАЦИЯ ===
+    function switchTab(tab) {
+      ['polls-screen', 'news-screen', 'profile-screen'].forEach(id => document.getElementById(id).classList.add('hidden'));
+      document.getElementById(`${tab}-screen`).classList.remove('hidden');
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById(`btn-${tab}`).classList.add('active');
+
+      if (tab === 'polls') { renderPolls(); checkAdminUI(); }
+      if (tab === 'news') { renderNews(); checkAdminUI(); }
+      if (tab === 'profile') loadProfile();
+    }
+
     function showScreen(id) {
       document.querySelectorAll('main > div').forEach(d => d.classList.add('hidden'));
       document.getElementById(id).classList.remove('hidden');
-      document.getElementById('nav-btns').classList.toggle('hidden', id === 'auth-screen');
-      
-      if (id === 'home-screen') renderPolls();
-      if (id === 'profile-screen') loadProfile();
+      document.getElementById('main-nav').classList.toggle('hidden', id === 'auth-screen' || id === 'create-screen' || id === 'vote-screen');
     }
 
-    function showMsg(el, text, type) {
-      el.textContent = text;
-      el.className = `alert ${type}`;
+    function showMsg(text, type) {
+      const el = document.getElementById('auth-msg');
+      el.textContent = text; el.className = `alert ${type}`;
       setTimeout(() => el.textContent = '', 3000);
     }
 
-    // === АВТОРИЗАЦИЯ И РЕГИСТРАЦИЯ ===
-    function handleAuth() {
-      const login = document.getElementById('auth-login').value.trim();
-      const pass = document.getElementById('auth-pass').value;
-      if (!login || !pass) return showMsg(document.getElementById('auth-msg'), 'Заполните поля', 'error');
+    function checkAdminUI() {
+      const isAdm = currentUser?.role === 'admin';
+      document.getElementById('btn-create-poll').style.display = isAdm ? 'block' : 'none';
+      document.getElementById('news-form').style.display = isAdm ? 'block' : 'none';
+    }
 
-      const user = DB.get('users').find(u => u.login === login && u.pass === pass);
-      if (user) {
-        currentUser = user;
-        localStorage.setItem('currentUser', JSON.stringify(user));
-        showScreen('home-screen');
-      } else {
-        showMsg(document.getElementById('auth-msg'), 'Неверный логин или пароль', 'error');
-      }
+    // === АВТОРИЗАЦИЯ ===
+    function handleAuth() {
+      const l = document.getElementById('auth-login').value.trim();
+      const p = document.getElementById('auth-pass').value;
+      if (!l || !p) return showMsg('Введите логин и пароль', 'error');
+      const u = DB.get('users').find(x => x.login === l && x.pass === p);
+      if (u) {
+        currentUser = u;
+        localStorage.setItem('currentUser', JSON.stringify(u));
+        showScreen('polls-screen');
+        switchTab('polls');
+      } else showMsg('Неверный логин или пароль', 'error');
     }
 
     function handleRegister() {
-      const login = document.getElementById('reg-login').value.trim();
-      const pass = document.getElementById('reg-pass').value;
-      const msg = document.getElementById('auth-msg');
-      if (!login || !pass) return showMsg(msg, 'Введите логин и пароль', 'error');
-      if (DB.get('users').some(u => u.login === login)) return showMsg(msg, 'Логин уже занят', 'error');
-
-      const newUser = {
-        id: 'usr_' + Date.now(),
-        login, pass,
-        role: 'council', // Регистрация ТОЛЬКО для членов совета
-        displayName: login,
-        createdAt: new Date().toISOString(),
-        photo: null
-      };
-      const users = DB.get('users');
-      users.push(newUser);
-      DB.set('users', users);
-
-      showMsg(msg, 'Аккаунт создан! Теперь войдите.', 'success');
+      const l = document.getElementById('reg-login').value.trim();
+      const p = document.getElementById('reg-pass').value;
+      if (!l || !p) return showMsg('Заполните все поля', 'error');
+      if (DB.get('users').some(x => x.login === l)) return showMsg('Логин занят', 'error');
+      DB.set('users', [...DB.get('users'), { id: 'usr_'+Date.now(), login: l, pass: p, role: 'council', displayName: l, createdAt: new Date().toISOString() }]);
+      showMsg('✅ Аккаунт создан! Войдите.', 'success');
       document.getElementById('reg-login').value = '';
       document.getElementById('reg-pass').value = '';
     }
 
     function logout() {
-      currentUser = null;
-      localStorage.removeItem('currentUser');
+      currentUser = null; localStorage.removeItem('currentUser');
       showScreen('auth-screen');
     }
 
     // === ОПРОСЫ ===
     function renderPolls() {
-      const list = document.getElementById('polls-list');
-      const polls = DB.get('polls').filter(p => new Date(p.deadline) >= new Date().setHours(0,0,0,0));
-      list.innerHTML = polls.length ? '' : '<p style="text-align:center; color:#64748b; margin-top:2rem;">Нет активных опросов</p>';
+      const list = document.getElementById('polls-list'); list.innerHTML = '';
+      const polls = DB.get('polls').filter(p => new Date(p.deadline) >= new Date());
+      if (!polls.length) { list.innerHTML = '<p style="text-align:center; color:#64748b; margin-top:2rem;">Нет активных опросов</p>'; return; }
       
-      // Показываем кнопку создания только админу
-      document.getElementById('btn-create').style.display = (currentUser.role === 'admin') ? 'block' : 'none';
-
       polls.forEach(p => {
         const voted = DB.get('votes').some(v => v.pollId === p.id && v.userId === currentUser.id);
         const card = document.createElement('div');
-        card.className = 'card poll-item';
-        card.innerHTML = `
-          <div style="display:flex; justify-content:space-between; align-items:center;">
-            <strong>${p.title}</strong>
-            ${voted ? '<span class="badge" style="background:#d1fae5;color:#047857;">✅ Голос принят</span>' : ''}
-          </div>
-          <small style="color:#64748b;">До: ${new Date(p.deadline).toLocaleDateString()}</small>
-        `;
+        card.className = 'list-item';
+        card.innerHTML = `<div style="display:flex; justify-content:space-between; align-items:center;">
+          <strong>${p.title}</strong> ${voted ? '<span class="badge voted">✅ Проголосовано</span>' : ''}
+        </div><small style="color:#64748b;">До: ${new Date(p.deadline).toLocaleDateString()}</small>`;
         card.onclick = () => openPoll(p.id);
         list.appendChild(card);
       });
@@ -261,184 +253,118 @@
     }
 
     function createPoll() {
-      if (currentUser.role !== 'admin') return alert('Создавать опросы может только администратор');
-      
-      const title = document.getElementById('poll-title').value.trim();
-      const desc = document.getElementById('poll-desc').value.trim();
-      const deadline = document.getElementById('poll-deadline').value;
+      const t = document.getElementById('poll-title').value.trim();
+      const d = document.getElementById('poll-desc').value.trim();
+      const dl = document.getElementById('poll-deadline').value;
       const opts = [...document.querySelectorAll('.poll-opt')].map(i => i.value.trim()).filter(Boolean);
-
-      if (!title || opts.length < 2 || !deadline) return alert('Заполните тему, минимум 2 варианта и дату окончания');
-      if (new Date(deadline) < new Date().setHours(0,0,0,0)) return alert('Дата не может быть в прошлом');
-
-      const polls = DB.get('polls');
-      polls.push({
-        id: 'poll_' + Date.now(), title, desc,
-        options: opts.map((t, i) => ({ id: `opt_${i}`, text: t, votes: 0 })),
-        createdBy: currentUser.id, deadline, createdAt: new Date().toISOString()
-      });
-      DB.set('polls', polls);
-
-      document.getElementById('poll-title').value = '';
-      document.getElementById('poll-desc').value = '';
-      document.getElementById('poll-deadline').value = '';
-      document.getElementById('options-container').innerHTML = `
-        <input class="poll-opt" placeholder="Вариант 1">
-        <input class="poll-opt" placeholder="Вариант 2">
-      `;
-      showScreen('home-screen');
+      if (!t || opts.length < 2 || !dl) return alert('Заполните тему, 2+ варианта и дату');
+      DB.set('polls', [...DB.get('polls'), { id: 'p_'+Date.now(), title: t, desc: d, options: opts.map((x,i)=>({id:`o_${i}`,text:x,votes:0})), createdBy: currentUser.id, deadline: dl }]);
+      document.getElementById('poll-title').value = ''; document.getElementById('poll-desc').value = '';
+      document.getElementById('options-container').innerHTML = `<input class="poll-opt" placeholder="Вариант 1"><input class="poll-opt" placeholder="Вариант 2">`;
+      switchTab('polls');
     }
 
-    // === ГОЛОСОВАНИЕ ===
     function openPoll(id) {
       currentPollId = id;
-      const poll = DB.get('polls').find(p => p.id === id);
-      document.getElementById('vote-title').textContent = poll.title;
-      document.getElementById('vote-desc').textContent = poll.desc || 'Без описания';
+      const p = DB.get('polls').find(x => x.id === id);
+      document.getElementById('vote-title').textContent = p.title;
+      document.getElementById('vote-desc').textContent = p.desc || 'Без описания';
       document.getElementById('vote-submit').style.display = 'block';
-      document.getElementById('vote-result').classList.add('hidden');
-      document.getElementById('vote-result').innerHTML = '';
-      
-      const container = document.getElementById('vote-options');
-      container.innerHTML = '';
-      const voted = DB.get('votes').some(v => v.pollId === id && v.userId === currentUser.id);
-
-      if (voted) {
-        showResults(poll);
-        document.getElementById('vote-submit').style.display = 'none';
-      } else {
-        poll.options.forEach((opt, i) => {
-          const div = document.createElement('div');
-          div.className = 'option';
-          div.innerHTML = `<span style="margin-right:10px; font-weight:bold; color:var(--muted);">${String.fromCharCode(65+i)}</span> ${opt.text}`;
-          div.onclick = () => {
-            document.querySelectorAll('.option').forEach(o => o.classList.remove('selected'));
-            div.classList.add('selected');
-            div.dataset.idx = i;
-          };
-          container.appendChild(div);
-        });
-      }
+      document.getElementById('vote-submit').textContent = 'Отправить голос';
+      const cont = document.getElementById('vote-options'); cont.innerHTML = '';
+      if (DB.get('votes').some(v => v.pollId === id && v.userId === currentUser.id)) { showResults(p); document.getElementById('vote-submit').style.display = 'none'; return; }
+      p.options.forEach((o,i) => {
+        const d = document.createElement('div'); d.className = 'list-item';
+        d.innerHTML = `<span style="font-weight:bold; color:var(--muted);">${String.fromCharCode(65+i)})</span> ${o.text}`;
+        d.onclick = () => { document.querySelectorAll('#vote-options > div').forEach(x => x.style.borderColor = 'transparent'); d.style.borderColor = 'var(--primary)'; d.dataset.idx = i; };
+        cont.appendChild(d);
+      });
       showScreen('vote-screen');
     }
 
     function submitVote() {
-      const selected = document.querySelector('.option.selected');
-      if (!selected) return alert('Выберите вариант');
-      
-      const optIdx = parseInt(selected.dataset.idx);
-      const votes = DB.get('votes');
-      const polls = DB.get('polls');
-      const poll = polls.find(p => p.id === currentPollId);
-      
-      poll.options[optIdx].votes++;
-      DB.set('polls', polls);
-      votes.push({ pollId: currentPollId, userId: currentUser.id, optionIdx: optIdx, votedAt: new Date().toISOString() });
-      DB.set('votes', votes);
-
-      showResults(poll);
-      document.getElementById('vote-submit').style.display = 'none';
+      const s = document.querySelector('#vote-options > div[style*="border-color: var(--primary)"]');
+      if (!s) return alert('Выберите вариант');
+      const idx = parseInt(s.dataset.idx);
+      const polls = DB.get('polls'), p = polls.find(x => x.id === currentPollId);
+      p.options[idx].votes++; DB.set('polls', polls);
+      DB.set('votes', [...DB.get('votes'), { pollId: currentPollId, userId: currentUser.id, optionIdx: idx }]);
+      showResults(p); document.getElementById('vote-submit').style.display = 'none';
     }
 
-    function showResults(poll) {
-      const total = poll.options.reduce((s, o) => s + o.votes, 0);
-      const res = document.getElementById('vote-result');
-      res.classList.remove('hidden');
-      res.innerHTML = '<h3 style="margin-bottom:0.8rem;">📊 Результаты</h3>';
-      
-      poll.options.forEach(opt => {
-        const pct = total ? Math.round((opt.votes / total) * 100) : 0;
-        res.innerHTML += `
-          <div style="margin-bottom:0.8rem;">
-            <div style="display:flex; justify-content:space-between; font-size:0.9rem;">
-              <strong>${opt.text}</strong> <span>${pct}%</span>
-            </div>
-            <div class="result-bar"><div class="result-fill" style="width:${pct}%"></div></div>
-          </div>`;
+    function showResults(p) {
+      const total = p.options.reduce((s,o)=>s+o.votes,0);
+      const c = document.getElementById('vote-options'); c.innerHTML = '<h3 style="margin-bottom:0.8rem;">📊 Результаты</h3>';
+      p.options.forEach(o => {
+        const pct = total ? Math.round((o.votes/total)*100) : 0;
+        c.innerHTML += `<div style="margin-bottom:0.8rem;"><div style="display:flex; justify-content:space-between; font-size:0.9rem;"><strong>${o.text}</strong><span>${pct}%</span></div><div style="height:8px; background:#e2e8f0; border-radius:4px; overflow:hidden;"><div style="height:100%; width:${pct}%; background:var(--primary); transition:0.4s;"></div></div></div>`;
       });
     }
 
-    // === ЛИЧНЫЙ КАБИНЕТ И ФОТО ===
-    function loadProfile() {
-      const user = DB.getUser(currentUser.id);
-      document.getElementById('profile-name').textContent = user.displayName || user.login;
-      document.getElementById('profile-role').textContent = user.role === 'admin' ? 'Администратор' : 'Член Совета';
-      document.getElementById('profile-role').className = `badge ${user.role}`;
-      document.getElementById('profile-date').textContent = `В системе с ${new Date(user.createdAt).toLocaleDateString()}`;
-      document.getElementById('display-name').value = user.displayName || user.login;
-      
-      const img = document.getElementById('profile-img');
-      if (user.photo) {
-        img.src = user.photo;
-        img.classList.remove('avatar-placeholder');
-      } else {
-        img.src = '';
-        img.classList.add('avatar-placeholder');
-        img.alt = (user.displayName || user.login).charAt(0).toUpperCase();
-      }
+    // === НОВОСТИ ===
+    function renderNews() {
+      const list = document.getElementById('news-list'); list.innerHTML = '';
+      const news = DB.get('news').sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
+      if (!news.length) { list.innerHTML = '<p style="text-align:center; color:#64748b; margin-top:2rem;">Нет новостей</p>'; return; }
+      news.forEach(n => {
+        const author = DB.get('users').find(u => u.id === n.authorId);
+        const card = document.createElement('div'); card.className = 'news-card';
+        const isAdmin = currentUser.role === 'admin';
+        card.innerHTML = `
+          <div class="news-header">
+            <h3>${n.title}</h3>
+            ${isAdmin ? `<button class="delete-btn" onclick="deleteNews('${n.id}')">🗑️</button>` : ''}
+          </div>
+          <div class="news-text">${n.content}</div>
+          <div class="news-meta">
+            <span>👤 ${author?.displayName || 'Удалён'}</span> • 
+            <span>📅 ${new Date(n.createdAt).toLocaleString('ru-RU')}</span>
+          </div>`;
+        list.appendChild(card);
+      });
+    }
 
-      // Статистика
-      const created = DB.get('polls').filter(p => p.createdBy === user.id).length;
-      const voted = DB.get('votes').filter(v => v.userId === user.id).length;
-      document.getElementById('stat-created').textContent = created;
-      document.getElementById('stat-voted').textContent = voted;
+    function createNews() {
+      const t = document.getElementById('news-title').value.trim();
+      const c = document.getElementById('news-content').value.trim();
+      if (!t || !c) return alert('Заполните заголовок и текст');
+      DB.set('news', [...DB.get('news'), { id: 'n_'+Date.now(), title: t, content: c, authorId: currentUser.id, createdAt: new Date().toISOString() }]);
+      document.getElementById('news-title').value = ''; document.getElementById('news-content').value = '';
+      renderNews();
+    }
+
+    function deleteNews(id) {
+      if (!confirm('Удалить новость?')) return;
+      DB.set('news', DB.get('news').filter(n => n.id !== id));
+      renderNews();
+    }
+
+    // === ПРОФИЛЬ ===
+    function loadProfile() {
+      const u = DB.get('users').find(x => x.id === currentUser.id);
+      document.getElementById('profile-name').textContent = u.displayName || u.login;
+      document.getElementById('profile-role').textContent = u.role === 'admin' ? 'Администратор' : 'Член Совета';
+      document.getElementById('profile-role').className = `badge ${u.role}`;
+      document.getElementById('profile-avatar').textContent = (u.displayName || u.login).charAt(0).toUpperCase();
+      document.getElementById('display-name').value = u.displayName || '';
+      document.getElementById('stat-voted').textContent = DB.get('votes').filter(v => v.userId === u.id).length;
     }
 
     function saveProfile() {
-      const newName = document.getElementById('display-name').value.trim();
-      const users = DB.get('users');
-      const idx = users.findIndex(u => u.id === currentUser.id);
-      
-      if (newName) users[idx].displayName = newName;
-      DB.set('users', users);
-      currentUser = users[idx];
-      localStorage.setItem('currentUser', JSON.stringify(currentUser));
-      
-      loadProfile();
-      alert('Профиль обновлён');
+      const n = document.getElementById('display-name').value.trim();
+      if (!n) return;
+      const users = DB.get('users'), i = users.findIndex(u => u.id === currentUser.id);
+      users[i].displayName = n; DB.set('users', users);
+      currentUser = users[i]; localStorage.setItem('currentUser', JSON.stringify(currentUser));
+      loadProfile(); alert('✅ Сохранено');
     }
 
-    // Обработка загрузки фото (с сжатием до 500КБ для localStorage)
-    document.getElementById('photo-upload').addEventListener('change', function(e) {
-      const file = e.target.files[0];
-      if (!file) return;
-      
-      const reader = new FileReader();
-      reader.onload = function(event) {
-        const img = new Image();
-        img.onload = function() {
-          const canvas = document.createElement('canvas');
-          const size = 300; // Размер аватарки
-          canvas.width = size; canvas.height = size;
-          const ctx = canvas.getContext('2d');
-          ctx.drawImage(img, 0, 0, size, size);
-          const base64 = canvas.toDataURL('image/jpeg', 0.7); // Сжатие JPEG 70%
-          
-          const users = DB.get('users');
-          const idx = users.findIndex(u => u.id === currentUser.id);
-          users[idx].photo = base64;
-          DB.set('users', users);
-          
-          currentUser = users[idx];
-          localStorage.setItem('currentUser', JSON.stringify(currentUser));
-          loadProfile();
-        };
-        img.src = event.target.result;
-      };
-      reader.readAsDataURL(file);
-    });
-
-    // === ЗАПУСК ===
+    // === СТАРТ ===
     window.onload = () => {
-      const saved = localStorage.getItem('currentUser');
-      if (saved) {
-        currentUser = JSON.parse(saved);
-        // Проверяем, не удалили ли пользователя из базы
-        if (DB.getUser(currentUser.id)) showScreen('home-screen');
-        else { localStorage.removeItem('currentUser'); showScreen('auth-screen'); }
-      } else {
-        showScreen('auth-screen');
-      }
+      try {
+        const s = localStorage.getItem('currentUser');
+        if (s) { currentUser = JSON.parse(s); if (DB.get('users').some(u => u.id === currentUser.id)) { showScreen('polls-screen'); switchTab('polls'); } else localStorage.removeItem('currentUser'); }
+      } catch {}
     };
   </script>
 </body>
