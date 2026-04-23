@@ -25,26 +25,25 @@
     button.secondary { background: #e2e8f0; color: var(--text); margin-top: 0.5rem; }
     button.danger { background: #ef4444; }
     button.danger:hover { background: #dc2626; }
+    button.outline { background: transparent; border: 1px solid var(--muted); color: var(--muted); margin-top: 0.5rem; }
     
     .list-item { background: white; border-radius: var(--radius); padding: 1rem; margin-bottom: 0.8rem; box-shadow: var(--shadow); border-left: 4px solid var(--primary); cursor: pointer; transition: 0.2s; }
     .list-item:hover { transform: translateY(-2px); }
-    
     .news-card { background: white; border-radius: var(--radius); padding: 1.2rem; margin-bottom: 0.8rem; box-shadow: var(--shadow); position: relative; }
     .news-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem; }
     .news-meta { font-size: 0.75rem; color: var(--muted); display: flex; gap: 0.5rem; align-items: center; }
     .news-text { white-space: pre-wrap; line-height: 1.5; margin-bottom: 0.5rem; }
     .delete-btn { position: absolute; top: 1rem; right: 1rem; background: transparent; color: #94a3b8; border: none; cursor: pointer; font-size: 1.2rem; padding: 0; width: auto; }
     .delete-btn:hover { color: #ef4444; }
-    
     .badge { display: inline-block; padding: 0.2rem 0.5rem; border-radius: 99px; font-size: 0.7rem; font-weight: 700; }
     .badge.admin { background: #fef3c7; color: #b45309; }
     .badge.council { background: #dbeafe; color: #1d4ed8; }
     .badge.voted { background: #d1fae5; color: #047857; }
-    
     .alert { padding: 0.8rem; border-radius: 8px; margin-bottom: 1rem; font-size: 0.9rem; text-align: center; }
     .alert.error { background: #fee2e2; color: #b91c1c; }
     .alert.success { background: #d1fae5; color: #047857; }
     footer { text-align: center; padding: 1rem; font-size: 0.75rem; color: var(--muted); }
+    .debug-box { background: #1e293b; color: #22c55e; padding: 0.5rem; border-radius: 6px; font-family: monospace; font-size: 0.75rem; margin-top: 0.5rem; display: none; }
   </style>
 </head>
 <body>
@@ -63,14 +62,17 @@
     <div id="auth-screen">
       <div class="card">
         <h2 style="margin-bottom: 1rem;">Вход в систему</h2>
-        <input id="auth-login" placeholder="Логин">
-        <input id="auth-pass" type="password" placeholder="Пароль">
+        <input id="auth-login" placeholder="Логин (точное совпадение)" autocomplete="off">
+        <input id="auth-pass" type="password" placeholder="Пароль" autocomplete="off">
         <button onclick="handleAuth()">Войти</button>
+        <button class="outline" onclick="toggleDebug()">🔍 Показать отладку</button>
+        <div id="debug-msg" class="debug-box"></div>
         <hr style="margin: 1.5rem 0; border: 0; border-top: 1px solid #e2e8f0;">
         <h3>Регистрация (только члены совета)</h3>
-        <input id="reg-login" placeholder="Придумайте логин">
-        <input id="reg-pass" type="password" placeholder="Придумайте пароль">
+        <input id="reg-login" placeholder="Придумайте логин" autocomplete="off">
+        <input id="reg-pass" type="password" placeholder="Придумайте пароль" autocomplete="off">
         <button class="secondary" onclick="handleRegister()">Зарегистрироваться</button>
+        <button class="danger" style="margin-top:0.5rem; background:#94a3b8;" onclick="resetApp()">⚠️ Сбросить все данные (если вход сломался)</button>
         <div id="auth-msg"></div>
       </div>
     </div>
@@ -88,7 +90,7 @@
     <div id="news-screen" class="hidden">
       <div class="card" id="news-form" style="display:none; margin-bottom: 1rem;">
         <h3>📝 Добавить новость</h3>
-        <input id="news-title" placeholder="Заголовок">
+        <input id="news-title" placeholder="Заголовок" autocomplete="off">
         <textarea id="news-content" rows="4" placeholder="Текст новости..."></textarea>
         <button onclick="createNews()">Опубликовать</button>
       </div>
@@ -108,21 +110,21 @@
         <div style="background:#f1f5f9; padding:1rem; border-radius:10px; margin-bottom:1rem;">
           <p>📊 Статистика: <strong id="stat-voted">0</strong> голосов отдано</p>
         </div>
-        <input id="display-name" placeholder="Отображаемое имя">
+        <input id="display-name" placeholder="Отображаемое имя" autocomplete="off">
         <button onclick="saveProfile()">Сохранить изменения</button>
       </div>
     </div>
 
-    <!-- СОЗДАНИЕ ОПРОСА (всплывающее) -->
+    <!-- СОЗДАНИЕ ОПРОСА -->
     <div id="create-screen" class="hidden">
       <div class="card">
         <button onclick="switchTab('polls')" class="secondary" style="width:auto; margin-bottom:1rem;">← Назад</button>
         <h2>Новый опрос</h2>
-        <input id="poll-title" placeholder="Тема опроса">
+        <input id="poll-title" placeholder="Тема опроса" autocomplete="off">
         <textarea id="poll-desc" rows="3" placeholder="Описание"></textarea>
         <div id="options-container">
-          <input class="poll-opt" placeholder="Вариант 1">
-          <input class="poll-opt" placeholder="Вариант 2">
+          <input class="poll-opt" placeholder="Вариант 1" autocomplete="off">
+          <input class="poll-opt" placeholder="Вариант 2" autocomplete="off">
         </div>
         <button onclick="addOption()" class="secondary">+ Добавить вариант</button>
         <input id="poll-deadline" type="date" style="margin-top: 1rem;">
@@ -130,7 +132,7 @@
       </div>
     </div>
 
-    <!-- ГОЛОСОВАНИЕ (всплывающее) -->
+    <!-- ГОЛОСОВАНИЕ -->
     <div id="vote-screen" class="hidden">
       <div class="card">
         <button onclick="switchTab('polls')" class="secondary" style="width: auto; margin-bottom: 1rem;">← Назад</button>
@@ -145,26 +147,29 @@
   <footer>🔒 Демо-режим. Данные хранятся в браузере.</footer>
 
   <script>
-    // === БАЗА ДАННЫХ ===
+    // === НАДЁЖНАЯ БАЗА ДАННЫХ ===
     const DB = {
-      cache: { users: [], polls: [], votes: [], news: [] },
-      get(k) {
+      data: { users: [], polls: [], votes: [], news: [] },
+      init() {
         try {
-          const d = localStorage.getItem(k);
-          if (d) this.cache[k] = JSON.parse(d);
-        } catch {}
-        return this.cache[k];
+          const saved = localStorage.getItem('sv_app_data');
+          if (saved) this.data = JSON.parse(saved);
+        } catch {
+          console.warn('⚠️ LocalStorage недоступен. Работаю в режиме памяти (данные исчезнут после закрытия вкладки).');
+        }
+        // Гарантированное создание админа
+        if (!this.data.users.some(u => u.login === 'admin')) {
+          this.data.users.push({
+            id: 'admin_01', login: 'admin', pass: 'admin123', role: 'admin',
+            displayName: 'Администратор', createdAt: new Date().toISOString()
+          });
+          this.save();
+        }
       },
-      set(k, v) {
-        this.cache[k] = v;
-        try { localStorage.setItem(k, JSON.stringify(v)); } catch {}
+      save() {
+        try { localStorage.setItem('sv_app_data', JSON.stringify(this.data)); } catch {}
       }
     };
-
-    // Инициализация
-    if (DB.get('users').length === 0) {
-      DB.set('users', [{ id: 'admin_01', login: 'admin', pass: 'admin123', role: 'admin', displayName: 'Администратор', createdAt: new Date().toISOString() }]);
-    }
 
     let currentUser = null;
     let currentPollId = null;
@@ -175,16 +180,16 @@
       document.getElementById(`${tab}-screen`).classList.remove('hidden');
       document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
       document.getElementById(`btn-${tab}`).classList.add('active');
-
-      if (tab === 'polls') { renderPolls(); checkAdminUI(); }
-      if (tab === 'news') { renderNews(); checkAdminUI(); }
+      if (tab === 'polls') renderPolls();
+      if (tab === 'news') renderNews();
       if (tab === 'profile') loadProfile();
+      checkAdminUI();
     }
 
     function showScreen(id) {
       document.querySelectorAll('main > div').forEach(d => d.classList.add('hidden'));
       document.getElementById(id).classList.remove('hidden');
-      document.getElementById('main-nav').classList.toggle('hidden', id === 'auth-screen' || id === 'create-screen' || id === 'vote-screen');
+      document.getElementById('main-nav').classList.toggle('hidden', id !== 'auth-screen' && id !== 'create-screen' && id !== 'vote-screen');
     }
 
     function showMsg(text, type) {
@@ -199,57 +204,75 @@
       document.getElementById('news-form').style.display = isAdm ? 'block' : 'none';
     }
 
+    function toggleDebug() {
+      const box = document.getElementById('debug-msg');
+      box.style.display = box.style.display === 'block' ? 'none' : 'block';
+      if (box.style.display === 'block') {
+        box.innerHTML = `Пользователей: ${DB.data.users.length}<br>Админ найден: ${DB.data.users.some(u => u.login === 'admin') ? '✅' : '❌'}<br>localStorage: ${localStorage.getItem('sv_app_data') ? '✅ Активен' : '⚠️ Отключён/Пуст'}`;
+      }
+    }
+
     // === АВТОРИЗАЦИЯ ===
     function handleAuth() {
       const l = document.getElementById('auth-login').value.trim();
       const p = document.getElementById('auth-pass').value;
       if (!l || !p) return showMsg('Введите логин и пароль', 'error');
-      const u = DB.get('users').find(x => x.login === l && x.pass === p);
+
+      const u = DB.data.users.find(x => x.login === l && x.pass === p);
       if (u) {
         currentUser = u;
-        localStorage.setItem('currentUser', JSON.stringify(u));
+        localStorage.setItem('sv_current_user', JSON.stringify(u));
         showScreen('polls-screen');
         switchTab('polls');
-      } else showMsg('Неверный логин или пароль', 'error');
+      } else {
+        console.log('🔍 Ошибка входа. Введено:', {l, p}, 'В базе:', DB.data.users);
+        showMsg('❌ Неверный логин или пароль. Ожидается: admin / admin123', 'error');
+      }
     }
 
     function handleRegister() {
       const l = document.getElementById('reg-login').value.trim();
       const p = document.getElementById('reg-pass').value;
       if (!l || !p) return showMsg('Заполните все поля', 'error');
-      if (DB.get('users').some(x => x.login === l)) return showMsg('Логин занят', 'error');
-      DB.set('users', [...DB.get('users'), { id: 'usr_'+Date.now(), login: l, pass: p, role: 'council', displayName: l, createdAt: new Date().toISOString() }]);
-      showMsg('✅ Аккаунт создан! Войдите.', 'success');
+      if (DB.data.users.some(x => x.login === l)) return showMsg('Логин уже занят', 'error');
+      
+      DB.data.users.push({ id: 'usr_'+Date.now(), login: l, pass: p, role: 'council', displayName: l, createdAt: new Date().toISOString() });
+      DB.save();
+      showMsg('✅ Аккаунт создан! Теперь войдите.', 'success');
       document.getElementById('reg-login').value = '';
       document.getElementById('reg-pass').value = '';
     }
 
     function logout() {
-      currentUser = null; localStorage.removeItem('currentUser');
+      currentUser = null; 
+      localStorage.removeItem('sv_current_user');
       showScreen('auth-screen');
+    }
+
+    function resetApp() {
+      if(!confirm('⚠️ Это удалит ВСЕ опросы, новости и аккаунты. Продолжить?')) return;
+      localStorage.clear();
+      location.reload();
     }
 
     // === ОПРОСЫ ===
     function renderPolls() {
       const list = document.getElementById('polls-list'); list.innerHTML = '';
-      const polls = DB.get('polls').filter(p => new Date(p.deadline) >= new Date());
+      const polls = DB.data.polls.filter(p => new Date(p.deadline) >= new Date());
       if (!polls.length) { list.innerHTML = '<p style="text-align:center; color:#64748b; margin-top:2rem;">Нет активных опросов</p>'; return; }
-      
       polls.forEach(p => {
-        const voted = DB.get('votes').some(v => v.pollId === p.id && v.userId === currentUser.id);
-        const card = document.createElement('div');
-        card.className = 'list-item';
+        const voted = DB.data.votes.some(v => v.pollId === p.id && v.userId === currentUser.id);
+        const card = document.createElement('div'); card.className = 'list-item';
         card.innerHTML = `<div style="display:flex; justify-content:space-between; align-items:center;">
           <strong>${p.title}</strong> ${voted ? '<span class="badge voted">✅ Проголосовано</span>' : ''}
         </div><small style="color:#64748b;">До: ${new Date(p.deadline).toLocaleDateString()}</small>`;
-        card.onclick = () => openPoll(p.id);
-        list.appendChild(card);
+        card.onclick = () => openPoll(p.id); list.appendChild(card);
       });
     }
 
     function addOption() {
       const c = document.getElementById('options-container');
-      c.insertAdjacentHTML('beforeend', `<input class="poll-opt" placeholder="Вариант ${c.children.length + 1}">`);
+      c.insertAdjacentHTML('beforeend', `<input class="poll-opt" placeholder="Вариант ${c.children.length + 1}" autocomplete="off">`);
     }
 
     function createPoll() {
@@ -258,21 +281,22 @@
       const dl = document.getElementById('poll-deadline').value;
       const opts = [...document.querySelectorAll('.poll-opt')].map(i => i.value.trim()).filter(Boolean);
       if (!t || opts.length < 2 || !dl) return alert('Заполните тему, 2+ варианта и дату');
-      DB.set('polls', [...DB.get('polls'), { id: 'p_'+Date.now(), title: t, desc: d, options: opts.map((x,i)=>({id:`o_${i}`,text:x,votes:0})), createdBy: currentUser.id, deadline: dl }]);
+      DB.data.polls.push({ id: 'p_'+Date.now(), title: t, desc: d, options: opts.map((x,i)=>({id:`o_${i}`,text:x,votes:0})), createdBy: currentUser.id, deadline: dl });
+      DB.save();
       document.getElementById('poll-title').value = ''; document.getElementById('poll-desc').value = '';
-      document.getElementById('options-container').innerHTML = `<input class="poll-opt" placeholder="Вариант 1"><input class="poll-opt" placeholder="Вариант 2">`;
+      document.getElementById('options-container').innerHTML = `<input class="poll-opt" placeholder="Вариант 1" autocomplete="off"><input class="poll-opt" placeholder="Вариант 2" autocomplete="off">`;
       switchTab('polls');
     }
 
     function openPoll(id) {
       currentPollId = id;
-      const p = DB.get('polls').find(x => x.id === id);
+      const p = DB.data.polls.find(x => x.id === id);
       document.getElementById('vote-title').textContent = p.title;
       document.getElementById('vote-desc').textContent = p.desc || 'Без описания';
       document.getElementById('vote-submit').style.display = 'block';
       document.getElementById('vote-submit').textContent = 'Отправить голос';
       const cont = document.getElementById('vote-options'); cont.innerHTML = '';
-      if (DB.get('votes').some(v => v.pollId === id && v.userId === currentUser.id)) { showResults(p); document.getElementById('vote-submit').style.display = 'none'; return; }
+      if (DB.data.votes.some(v => v.pollId === id && v.userId === currentUser.id)) { showResults(p); document.getElementById('vote-submit').style.display = 'none'; return; }
       p.options.forEach((o,i) => {
         const d = document.createElement('div'); d.className = 'list-item';
         d.innerHTML = `<span style="font-weight:bold; color:var(--muted);">${String.fromCharCode(65+i)})</span> ${o.text}`;
@@ -286,9 +310,10 @@
       const s = document.querySelector('#vote-options > div[style*="border-color: var(--primary)"]');
       if (!s) return alert('Выберите вариант');
       const idx = parseInt(s.dataset.idx);
-      const polls = DB.get('polls'), p = polls.find(x => x.id === currentPollId);
-      p.options[idx].votes++; DB.set('polls', polls);
-      DB.set('votes', [...DB.get('votes'), { pollId: currentPollId, userId: currentUser.id, optionIdx: idx }]);
+      const p = DB.data.polls.find(x => x.id === currentPollId);
+      p.options[idx].votes++; DB.save();
+      DB.data.votes.push({ pollId: currentPollId, userId: currentUser.id, optionIdx: idx });
+      DB.save();
       showResults(p); document.getElementById('vote-submit').style.display = 'none';
     }
 
@@ -304,22 +329,16 @@
     // === НОВОСТИ ===
     function renderNews() {
       const list = document.getElementById('news-list'); list.innerHTML = '';
-      const news = DB.get('news').sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
+      const news = [...DB.data.news].sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
       if (!news.length) { list.innerHTML = '<p style="text-align:center; color:#64748b; margin-top:2rem;">Нет новостей</p>'; return; }
       news.forEach(n => {
-        const author = DB.get('users').find(u => u.id === n.authorId);
+        const author = DB.data.users.find(u => u.id === n.authorId);
         const card = document.createElement('div'); card.className = 'news-card';
         const isAdmin = currentUser.role === 'admin';
         card.innerHTML = `
-          <div class="news-header">
-            <h3>${n.title}</h3>
-            ${isAdmin ? `<button class="delete-btn" onclick="deleteNews('${n.id}')">🗑️</button>` : ''}
-          </div>
+          <div class="news-header"><h3>${n.title}</h3>${isAdmin ? `<button class="delete-btn" onclick="deleteNews('${n.id}')">🗑️</button>` : ''}</div>
           <div class="news-text">${n.content}</div>
-          <div class="news-meta">
-            <span>👤 ${author?.displayName || 'Удалён'}</span> • 
-            <span>📅 ${new Date(n.createdAt).toLocaleString('ru-RU')}</span>
-          </div>`;
+          <div class="news-meta"><span>👤 ${author?.displayName || 'Удалён'}</span> • <span>📅 ${new Date(n.createdAt).toLocaleString('ru-RU')}</span></div>`;
         list.appendChild(card);
       });
     }
@@ -328,42 +347,50 @@
       const t = document.getElementById('news-title').value.trim();
       const c = document.getElementById('news-content').value.trim();
       if (!t || !c) return alert('Заполните заголовок и текст');
-      DB.set('news', [...DB.get('news'), { id: 'n_'+Date.now(), title: t, content: c, authorId: currentUser.id, createdAt: new Date().toISOString() }]);
+      DB.data.news.push({ id: 'n_'+Date.now(), title: t, content: c, authorId: currentUser.id, createdAt: new Date().toISOString() });
+      DB.save();
       document.getElementById('news-title').value = ''; document.getElementById('news-content').value = '';
       renderNews();
     }
 
     function deleteNews(id) {
       if (!confirm('Удалить новость?')) return;
-      DB.set('news', DB.get('news').filter(n => n.id !== id));
+      DB.data.news = DB.data.news.filter(n => n.id !== id); DB.save();
       renderNews();
     }
 
     // === ПРОФИЛЬ ===
     function loadProfile() {
-      const u = DB.get('users').find(x => x.id === currentUser.id);
+      const u = DB.data.users.find(x => x.id === currentUser.id);
       document.getElementById('profile-name').textContent = u.displayName || u.login;
       document.getElementById('profile-role').textContent = u.role === 'admin' ? 'Администратор' : 'Член Совета';
       document.getElementById('profile-role').className = `badge ${u.role}`;
       document.getElementById('profile-avatar').textContent = (u.displayName || u.login).charAt(0).toUpperCase();
       document.getElementById('display-name').value = u.displayName || '';
-      document.getElementById('stat-voted').textContent = DB.get('votes').filter(v => v.userId === u.id).length;
+      document.getElementById('stat-voted').textContent = DB.data.votes.filter(v => v.userId === u.id).length;
     }
 
     function saveProfile() {
       const n = document.getElementById('display-name').value.trim();
       if (!n) return;
-      const users = DB.get('users'), i = users.findIndex(u => u.id === currentUser.id);
-      users[i].displayName = n; DB.set('users', users);
-      currentUser = users[i]; localStorage.setItem('currentUser', JSON.stringify(currentUser));
+      const i = DB.data.users.findIndex(u => u.id === currentUser.id);
+      DB.data.users[i].displayName = n; DB.save();
+      currentUser = DB.data.users[i]; localStorage.setItem('sv_current_user', JSON.stringify(currentUser));
       loadProfile(); alert('✅ Сохранено');
     }
 
-    // === СТАРТ ===
+    // === ЗАПУСК ===
     window.onload = () => {
+      DB.init();
       try {
-        const s = localStorage.getItem('currentUser');
-        if (s) { currentUser = JSON.parse(s); if (DB.get('users').some(u => u.id === currentUser.id)) { showScreen('polls-screen'); switchTab('polls'); } else localStorage.removeItem('currentUser'); }
+        const s = localStorage.getItem('sv_current_user');
+        if (s) {
+          currentUser = JSON.parse(s);
+          // Проверка, не удалили ли пользователя
+          if (DB.data.users.some(u => u.id === currentUser.id)) {
+            showScreen('polls-screen'); switchTab('polls');
+          } else localStorage.removeItem('sv_current_user');
+        }
       } catch {}
     };
   </script>
