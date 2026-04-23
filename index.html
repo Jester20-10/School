@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Голосование Совета</title>
+  <style>
+    :root {
+      --primary: #4361ee;
+      --primary-hover: #3a56d4;
+      --bg: #f5f7fa;
+      --card: #ffffff;
+      --text: #1e293b;
+      --muted: #64748b;
+      --success: #10b981;
+      --danger: #ef4444;
+      --radius: 12px;
+      --shadow: 0 4px 12px rgba(0,0,0,0.08);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
+    body { background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; }
+    .hidden { display: none !important; }
+    header { background: var(--primary); color: white; padding: 1rem; text-align: center; position: sticky; top: 0; z-index: 10; }
+    header h1 { font-size: 1.25rem; }
+    main { flex: 1; padding: 1rem; max-width: 600px; margin: 0 auto; width: 100%; }
+    .card { background: var(--card); border-radius: var(--radius); padding: 1.25rem; box-shadow: var(--shadow); margin-bottom: 1rem; }
+    input, select, textarea { width: 100%; padding: 0.75rem; margin: 0.5rem 0 1rem; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 1rem; }
+    button { width: 100%; padding: 0.75rem; border: none; border-radius: 8px; background: var(--primary); color: white; font-size: 1rem; cursor: pointer; transition: 0.2s; }
+    button:hover { background: var(--primary-hover); }
+    button.secondary { background: #e2e8f0; color: var(--text); margin-top: 0.5rem; }
+    button.danger { background: var(--danger); }
+    .poll-item { cursor: pointer; border-left: 4px solid var(--primary); }
+    .poll-item:hover { background: #f8fafc; }
+    .badge { display: inline-block; padding: 0.25rem 0.5rem; border-radius: 999px; font-size: 0.75rem; font-weight: bold; margin-right: 0.5rem; }
+    .badge.admin { background: #fef3c7; color: #92400e; }
+    .badge.council { background: #dbeafe; color: #1e40af; }
+    .badge.voter { background: #e0e7ff; color: #3730a3; }
+    .option { display: flex; align-items: center; padding: 0.75rem; border: 1px solid #e2e8f0; border-radius: 8px; margin: 0.5rem 0; cursor: pointer; }
+    .option.selected { border-color: var(--primary); background: #eff6ff; }
+    .result-bar { height: 8px; background: #e2e8f0; border-radius: 4px; margin-top: 4px; overflow: hidden; }
+    .result-fill { height: 100%; background: var(--primary); transition: width 0.4s; }
+    .alert { padding: 0.75rem; border-radius: 8px; margin-bottom: 1rem; font-size: 0.9rem; }
+    .alert.error { background: #fee2e2; color: #b91c1c; }
+    .alert.success { background: #d1fae5; color: #047857; }
+    .nav { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
+    .nav button { flex: 1; font-size: 0.9rem; padding: 0.6rem; }
+    .footer { text-align: center; padding: 1rem; font-size: 0.8rem; color: var(--muted); }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🗳️ Совет Обучающихся</h1>
+  </header>
+
+  <main>
+    <!-- ЭКРАН АВТОРИЗАЦИИ -->
+    <div id="auth-screen">
+      <div class="card">
+        <h2 style="margin-bottom: 1rem;">Вход / Регистрация</h2>
+        <input id="auth-login" placeholder="Логин">
+        <input id="auth-pass" type="password" placeholder="Пароль">
+        <select id="auth-role">
+          <option value="voter">Ученик (Голосующий)</option>
+          <option value="council">Член Совета</option>
+          <option value="admin">Администратор</option>
+        </select>
+        <button onclick="handleAuth()">Войти или Зарегистрироваться</button>
+        <div id="auth-msg"></div>
+      </div>
+    </div>
+
+    <!-- ГЛАВНЫЙ ЭКРАН -->
+    <div id="home-screen" class="hidden">
+      <div class="nav">
+        <button onclick="showScreen('home-screen')">Опросы</button>
+        <button onclick="showScreen('create-screen')" id="btn-create">+ Создать</button>
+        <button onclick="logout()" class="secondary">Выйти</button>
+      </div>
+      <div id="polls-list"></div>
+    </div>
+
+    <!-- СОЗДАНИЕ ОПРОСА -->
+    <div id="create-screen" class="hidden">
+      <div class="card">
+        <h2>Новый опрос</h2>
+        <input id="poll-title" placeholder="Тема опроса">
+        <textarea id="poll-desc" rows="3" placeholder="Описание (необязательно)"></textarea>
+        <div id="options-container">
+          <input class="poll-opt" placeholder="Вариант 1">
+          <input class="poll-opt" placeholder="Вариант 2">
+        </div>
+        <button onclick="addOption()" class="secondary">+ Добавить вариант</button>
+        <input id="poll-deadline" type="date">
+        <button onclick="createPoll()">Опубликовать</button>
+        <button onclick="showScreen('home-screen')" class="secondary">Назад</button>
+      </div>
+    </div>
+
+    <!-- ГОЛОСОВАНИЕ / РЕЗУЛЬТАТЫ -->
+    <div id="vote-screen" class="hidden">
+      <div class="card">
+        <button onclick="showScreen('home-screen')" class="secondary" style="width: auto; margin-bottom: 1rem;">← Назад</button>
+        <h2 id="vote-title"></h2>
+        <p id="vote-desc" style="color: var(--muted); margin-bottom: 1rem;"></p>
+        <div id="vote-options"></div>
+        <div id="vote-result" class="hidden" style="margin-top: 1rem;"></div>
+        <button id="vote-submit" onclick="submitVote()">Отправить голос</button>
+      </div>
+    </div>
+  </main>
+
+  <div class="footer">Школьная система голосования • Данные хранятся локально</div>
+
+  <script>
+    // === ХРАНИЛИЩЕ (localStorage) ===
+    const DB = {
+      get: k => JSON.parse(localStorage.getItem(k) || '[]'),
+      set: (k, v) => localStorage.setItem(k, JSON.stringify(v))
+    };
+
+    // === СОСТОЯНИЕ ===
+    let currentUser = null;
+    let currentPollId = null;
+
+    // === ИНИЦИАЛИЗАЦИЯ ===
+    window.onload = () => {
+      const saved = localStorage.getItem('currentUser');
+      if (saved) {
+        currentUser = JSON.parse(saved);
+        showScreen('home-screen');
+      }
+      renderPolls();
+    };
+
+    // === АВТОРИЗАЦИЯ ===
+    function handleAuth() {
+      const login = document.getElementById('auth-login').value.trim();
+      const pass = document.getElementById('auth-pass').value;
+      const role = document.getElementById('auth-role').value;
+      const msg = document.getElementById('auth-msg');
+
+      if (!login || !pass) return showMsg(msg, 'Заполните логин и пароль', 'error');
+
+      let users = DB.get('users');
+      let user = users.find(u => u.login === login);
+
+      if (user) {
+        if (user.pass === pass) {
+          currentUser = user;
+          localStorage.setItem('currentUser', JSON.stringify(user));
+          showScreen('home-screen');
+        } else {
+          showMsg(msg, 'Неверный пароль', 'error');
+        }
+      } else {
+        user = { id: Date.now().toString(), login, pass, role, createdAt: new Date().toISOString() };
+        users.push(user);
+        DB.set('users', users);
+        currentUser = user;
+        localStorage.setItem('currentUser', JSON.stringify(user));
+        showScreen('home-screen');
+      }
+    }
+
+    function logout() {
+      currentUser = null;
+      localStorage.removeItem('currentUser');
+      showScreen('auth-screen');
+    }
+
+    // === НАВИГАЦИЯ ===
+    function showScreen(id) {
+      document.querySelectorAll('main > div').forEach(d => d.classList.add('hidden'));
+      document.getElementById(id).classList.remove('hidden');
+      if (id === 'home-screen') renderPolls();
+      // Скрываем кнопку создания для обычных учеников
+      const createBtn = document.getElementById('btn-create');
+      createBtn.style.display = (currentUser.role === 'admin' || currentUser.role === 'council') ? 'block' : 'none';
+    }
+
+    // === ОПРОСЫ ===
+    function addOption() {
+      const container = document.getElementById('options-container');
+      const inp = document.createElement('input');
+      inp.className = 'poll-opt';
+      inp.placeholder = `Вариант ${container.children.length + 1}`;
+      container.appendChild(inp);
+    }
+
+    function createPoll() {
+      const title = document.getElementById('poll-title').value.trim();
+      const desc = document.getElementById('poll-desc').value.trim();
+      const deadline = document.getElementById('poll-deadline').value;
+      const opts = [...document.querySelectorAll('.poll-opt')].map(i => i.value.trim()).filter(Boolean);
+
+      if (!title || opts.length < 2 || !deadline) return alert('Заполните тему, минимум 2 варианта и дедлайн');
+      if (new Date(deadline) < new Date()) return alert('Дедлайн не может быть в прошлом');
+
+      const polls = DB.get('polls');
+      polls.push({
+        id: 'poll_' + Date.now(),
+        title, desc, options: opts.map((t, i) => ({ id: `opt_${i}`, text: t, votes: 0 })),
+        createdBy: currentUser.id,
+        deadline,
+        createdAt: new Date().toISOString()
+      });
+      DB.set('polls', polls);
+
+      // Очистка формы
+      document.getElementById('poll-title').value = '';
+      document.getElementById('poll-desc').value = '';
+      document.getElementById('poll-deadline').value = '';
+      document.getElementById('options-container').innerHTML = `
+        <input class="poll-opt" placeholder="Вариант 1">
+        <input class="poll-opt" placeholder="Вариант 2">
+      `;
+      showScreen('home-screen');
+    }
+
+    function renderPolls() {
+      const list = document.getElementById('polls-list');
+      const polls = DB.get('polls').filter(p => new Date(p.deadline) > new Date());
+      list.innerHTML = polls.length ? '' : '<p style="text-align:center; color:#64748b; margin-top:2rem;">Нет активных опросов</p>';
+
+      polls.forEach(p => {
+        const hasVoted = DB.get('votes').some(v => v.pollId === p.id && v.userId === currentUser.id);
+        const card = document.createElement('div');
+        card.className = 'card poll-item';
+        card.innerHTML = `
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <strong>${p.title}</strong>
+            ${hasVoted ? '<span class="badge" style="background:#d1fae5;color:#047857;">✅ Голос принят</span>' : ''}
+          </div>
+          <small style="color:#64748b;">Дедлайн: ${new Date(p.deadline).toLocaleDateString()}</small>
+        `;
+        card.onclick = () => openPoll(p.id);
+        list.appendChild(card);
+      });
+    }
+
+    // === ГОЛОСОВАНИЕ ===
+    function openPoll(id) {
+      currentPollId = id;
+      const polls = DB.get('polls');
+      const poll = polls.find(p => p.id === id);
+      if (!poll) return;
+
+      document.getElementById('vote-title').textContent = poll.title;
+      document.getElementById('vote-desc').textContent = poll.desc || '';
+      document.getElementById('vote-submit').style.display = 'block';
+      document.getElementById('vote-result').classList.add('hidden');
+      document.getElementById('vote-result').innerHTML = '';
+
+      const container = document.getElementById('vote-options');
+      container.innerHTML = '';
+
+      const hasVoted = DB.get('votes').some(v => v.pollId === id && v.userId === currentUser.id);
+      if (hasVoted) {
+        showResults(poll);
+        document.getElementById('vote-submit').style.display = 'none';
+        return;
+      }
+
+      poll.options.forEach((opt, i) => {
+        const div = document.createElement('div');
+        div.className = 'option';
+        div.innerHTML = `<span style="margin-right:10px;">${String.fromCharCode(65 + i)}</span> ${opt.text}`;
+        div.onclick = () => {
+          document.querySelectorAll('.option').forEach(o => o.classList.remove('selected'));
+          div.classList.add('selected');
+          div.dataset.idx = i;
+        };
+        container.appendChild(div);
+      });
+
+      showScreen('vote-screen');
+    }
+
+    function submitVote() {
+      const selected = document.querySelector('.option.selected');
+      if (!selected) return alert('Выберите вариант');
+
+      const optIdx = parseInt(selected.dataset.idx);
+      const votes = DB.get('votes');
+      const polls = DB.get('polls');
+      const poll = polls.find(p => p.id === currentPollId);
+
+      poll.options[optIdx].votes++;
+      DB.set('polls', polls);
+
+      votes.push({ pollId: currentPollId, userId: currentUser.id, optionIdx: optIdx, votedAt: new Date().toISOString() });
+      DB.set('votes', votes);
+
+      showResults(poll);
+      document.getElementById('vote-submit').style.display = 'none';
+    }
+
+    function showResults(poll) {
+      const total = poll.options.reduce((s, o) => s + o.votes, 0);
+      const resDiv = document.getElementById('vote-result');
+      resDiv.classList.remove('hidden');
+      resDiv.innerHTML = '<h3>Результаты</h3>';
+
+      poll.options.forEach((opt, i) => {
+        const pct = total ? Math.round((opt.votes / total) * 100) : 0;
+        const bar = document.createElement('div');
+        bar.style.marginBottom = '1rem';
+        bar.innerHTML = `
+          <div style="display:flex; justify-content:space-between;">
+            <strong>${opt.text}</strong>
+            <span>${opt.votes} (${pct}%)</span>
+          </div>
+          <div class="result-bar"><div class="result-fill" style="width:${pct}%"></div></div>
+        `;
+        resDiv.appendChild(bar);
+      });
+    }
+
+    // === УТИЛИТЫ ===
+    function showMsg(el, text, type) {
+      el.textContent = text;
+      el.className = `alert ${type}`;
+      setTimeout(() => el.textContent = '', 3000);
+    }
+  </script>
+</body>
+</html>
