@@ -208,7 +208,7 @@
       const box = document.getElementById('debug-msg');
       box.style.display = box.style.display === 'block' ? 'none' : 'block';
       if (box.style.display === 'block') {
-        box.innerHTML = `Пользователей: ${DB.data.users.length}<br>Админ найден: ${DB.data.users.some(u => u.login === 'admin') ? '✅' : '❌'}<br>localStorage: ${localStorage.getItem('sv_app_data') ? '✅ Активен' : '⚠️ Отключён/Пуст'}`;
+        box.innerHTML = `Пользователей: ${DB.data.users.length}<br>Админ найден: ${DB.data.users.some(u => u.login === 'Жопа') ? '✅' : '❌'}<br>localStorage: ${localStorage.getItem('sv_app_data') ? '✅ Активен' : '⚠️ Отключён/Пуст'}`;
       }
     }
 
