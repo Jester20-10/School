@@ -58,7 +58,6 @@
   </header>
 
   <main>
-    <!-- АВТОРИЗАЦИЯ -->
     <div id="auth-screen">
       <div class="card">
         <h2 style="margin-bottom: 1rem;">Вход в систему</h2>
@@ -77,7 +76,6 @@
       </div>
     </div>
 
-    <!-- ОПРОСЫ -->
     <div id="polls-screen" class="hidden">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1rem;">
         <h2>Активные опросы</h2>
@@ -86,7 +84,6 @@
       <div id="polls-list"></div>
     </div>
 
-    <!-- НОВОСТИ -->
     <div id="news-screen" class="hidden">
       <div class="card" id="news-form" style="display:none; margin-bottom: 1rem;">
         <h3>📝 Добавить новость</h3>
@@ -97,7 +94,6 @@
       <div id="news-list"></div>
     </div>
 
-    <!-- ПРОФИЛЬ -->
     <div id="profile-screen" class="hidden">
       <div class="card">
         <div style="display:flex; gap:1rem; align-items:center; margin-bottom:1.5rem;">
@@ -115,7 +111,6 @@
       </div>
     </div>
 
-    <!-- СОЗДАНИЕ ОПРОСА -->
     <div id="create-screen" class="hidden">
       <div class="card">
         <button onclick="switchTab('polls')" class="secondary" style="width:auto; margin-bottom:1rem;">← Назад</button>
@@ -132,7 +127,6 @@
       </div>
     </div>
 
-    <!-- ГОЛОСОВАНИЕ -->
     <div id="vote-screen" class="hidden">
       <div class="card">
         <button onclick="switchTab('polls')" class="secondary" style="width: auto; margin-bottom: 1rem;">← Назад</button>
@@ -144,12 +138,16 @@
     </div>
   </main>
 
+  <footer>🔒 Демо-режим. Данные хранятся в браузере.</footer>
 
   <script>
     const DB = {
-      data: { users: [], polls: [], votes: [], news: [] },
+       { users: [], polls: [], votes: [], news: [] },
       init() {
-        try { const s = localStorage.getItem('sv_app_data'); if (s) this.data = JSON.parse(s); } catch {}
+        try {
+          const s = localStorage.getItem('sv_app_data');
+          if (s) this.data = JSON.parse(s);
+        } catch {}
         if (!this.data.users.some(u => u.login === 'admin')) {
           this.data.users.push({ id: 'admin_01', login: 'admin', pass: 'admin123', role: 'admin', displayName: 'Администратор', createdAt: new Date().toISOString() });
           this.save();
@@ -159,20 +157,48 @@
     };
 
     let currentUser = null;
-    let currentPollId = null;
 
-    // ✅ ИСПРАВЛЕННАЯ НАВИГАЦИЯ
+    // 🔄 ВОССТАНОВЛЕНИЕ СЕССИИ ПРИ ЗАГРУЗКЕ
+    function restoreSession() {
+      try {
+        const saved = localStorage.getItem('sv_current_user');
+        if (saved) {
+          const user = JSON.parse(saved);
+          const validUser = DB.data.users.find(u => u.id === user.id);
+          if (validUser) {
+            currentUser = validUser;
+            return true;
+          }
+        }
+      } catch {}
+      currentUser = null;
+      localStorage.removeItem('sv_current_user');
+      return false;
+    }
+
+    // 🖥️ ПРИМЕНЕНИЕ СОСТОЯНИЯ ИНТЕРФЕЙСА
+    function applySession() {
+      if (currentUser) {
+        document.getElementById('main-nav').classList.remove('hidden');
+        checkAdminUI();
+        switchTab('polls');
+      } else {
+        hideAllScreens();
+        document.getElementById('auth-screen').classList.remove('hidden');
+        document.getElementById('main-nav').classList.add('hidden');
+      }
+    }
+
+    function hideAllScreens() {
+      ['auth-screen', 'polls-screen', 'news-screen', 'profile-screen', 'create-screen', 'vote-screen']
+        .forEach(id => document.getElementById(id).classList.add('hidden'));
+    }
+
     function switchTab(tab) {
-      // Скрываем все основные экраны
-      ['polls-screen', 'news-screen', 'profile-screen'].forEach(id => document.getElementById(id).classList.add('hidden'));
-      // Показываем нужный
+      hideAllScreens();
       document.getElementById(`${tab}-screen`).classList.remove('hidden');
-      // Обновляем активную вкладку
       document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
       document.getElementById(`btn-${tab}`)?.classList.add('active');
-      // Всегда показываем верхнее меню при переключении вкладок
-      document.getElementById('main-nav').classList.remove('hidden');
-      // Загружаем контент
       if (tab === 'polls') renderPolls();
       if (tab === 'news') renderNews();
       if (tab === 'profile') loadProfile();
@@ -180,10 +206,9 @@
     }
 
     function showScreen(id) {
-      document.querySelectorAll('main > div').forEach(d => d.classList.add('hidden'));
+      hideAllScreens();
       document.getElementById(id).classList.remove('hidden');
-      // Скрываем меню только в подэкранах
-      document.getElementById('main-nav').classList.toggle('hidden', id === 'create-screen' || id === 'vote-screen');
+      document.getElementById('main-nav').classList.add('hidden');
     }
 
     function showMsg(text, type) {
@@ -201,7 +226,7 @@
     function toggleDebug() {
       const box = document.getElementById('debug-msg');
       box.style.display = box.style.display === 'block' ? 'none' : 'block';
-      if (box.style.display === 'block') box.innerHTML = `Пользователей: ${DB.data.users.length}<br>Админ: ${DB.data.users.some(u => u.login === 'admin') ? '✅' : '❌'}`;
+      if (box.style.display === 'block') box.innerHTML = `Сессия: ${currentUser ? '✅ ' + currentUser.login : '❌ Нет'}<br>Пользователей: ${DB.data.users.length}`;
     }
 
     function handleAuth() {
@@ -210,8 +235,9 @@
       if (!l || !p) return showMsg('Введите логин и пароль', 'error');
       const u = DB.data.users.find(x => x.login === l && x.pass === p);
       if (u) {
-        currentUser = u; localStorage.setItem('sv_current_user', JSON.stringify(u));
-        switchTab('polls');
+        currentUser = u;
+        localStorage.setItem('sv_current_user', JSON.stringify(u));
+        applySession();
       } else showMsg('❌ Неверный логин или пароль', 'error');
     }
 
@@ -226,8 +252,9 @@
     }
 
     function logout() {
-      currentUser = null; localStorage.removeItem('sv_current_user');
-      showScreen('auth-screen'); document.getElementById('main-nav').classList.add('hidden');
+      currentUser = null;
+      localStorage.removeItem('sv_current_user');
+      applySession();
     }
 
     function resetApp() {
@@ -240,7 +267,6 @@
       const list = document.getElementById('polls-list'); list.innerHTML = '';
       const polls = DB.data.polls.filter(p => new Date(p.deadline) >= new Date());
       if (!polls.length) { list.innerHTML = '<p style="text-align:center; color:#64748b; margin-top:2rem;">Нет активных опросов</p>'; return; }
-      
       polls.forEach(p => {
         const voted = DB.data.votes.some(v => v.pollId === p.id && v.userId === currentUser.id);
         const isAdmin = currentUser.role === 'admin';
@@ -376,16 +402,11 @@
       loadProfile(); alert('✅ Сохранено');
     }
 
+    // 🚀 ИНИЦИАЛИЗАЦИЯ ПРИ ЗАПУСКЕ
     window.onload = () => {
       DB.init();
-      try {
-        const s = localStorage.getItem('sv_current_user');
-        if (s) {
-          currentUser = JSON.parse(s);
-          if (DB.data.users.some(u => u.id === currentUser.id)) switchTab('polls');
-          else localStorage.removeItem('sv_current_user');
-        }
-      } catch {}
+      restoreSession();
+      applySession();
     };
   </script>
 </body>
