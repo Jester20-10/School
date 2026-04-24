@@ -141,9 +141,9 @@
   <footer>🔒 Демо-режим. Данные хранятся в браузере.</footer>
 
   <script>
-    // ✅ ИСПРАВЛЕННАЯ БАЗА ДАННЫХ (добавлен ключ `data`)
+    // ✅ ИСПРАВЛЕНО: добавлен ключ "data"
     const DB = {
-       { users: [], polls: [], votes: [], news: [] },
+      data: { users: [], polls: [], votes: [], news: [] },
       init() {
         try {
           const s = localStorage.getItem('sv_app_data');
@@ -162,7 +162,6 @@
 
     let currentUser = null;
 
-    // 🔄 ВОССТАНОВЛЕНИЕ СЕССИИ
     function restoreSession() {
       try {
         const saved = localStorage.getItem('sv_current_user');
@@ -180,7 +179,6 @@
       return false;
     }
 
-    // 🖥️ ПРИМЕНЕНИЕ СОСТОЯНИЯ
     function applySession() {
       hideAllScreens();
       if (currentUser) {
@@ -233,7 +231,6 @@
       if (box.style.display === 'block') box.innerHTML = `Сессия: ${currentUser ? '✅ ' + currentUser.login : '❌ Нет'}<br>Пользователей: ${DB.data.users.length}`;
     }
 
-    // 🔐 АВТОРИЗАЦИЯ
     function handleAuth() {
       const l = document.getElementById('auth-login').value.trim();
       const p = document.getElementById('auth-pass').value;
@@ -244,7 +241,7 @@
         currentUser = u;
         localStorage.setItem('sv_current_user', JSON.stringify(u));
         showMsg('✅ Успешный вход!', 'success');
-        setTimeout(applySession, 400); // Небольшая задержка для UX
+        setTimeout(applySession, 400);
       } else {
         showMsg('❌ Неверный логин или пароль', 'error');
       }
@@ -274,7 +271,6 @@
       localStorage.clear(); location.reload();
     }
 
-    // === ОПРОСЫ ===
     function renderPolls() {
       const list = document.getElementById('polls-list'); list.innerHTML = '';
       const polls = DB.data.polls.filter(p => new Date(p.deadline) >= new Date());
@@ -363,7 +359,6 @@
       });
     }
 
-    // === НОВОСТИ ===
     function renderNews() {
       const list = document.getElementById('news-list'); list.innerHTML = '';
       const news = [...DB.data.news].sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
@@ -396,7 +391,6 @@
       renderNews();
     }
 
-    // === ПРОФИЛЬ ===
     function loadProfile() {
       const u = DB.data.users.find(x => x.id === currentUser.id);
       document.getElementById('profile-name').textContent = u.displayName || u.login;
@@ -416,7 +410,6 @@
       loadProfile(); alert('✅ Сохранено');
     }
 
-    // 🚀 ЗАПУСК
     window.onload = () => {
       try {
         DB.init();
