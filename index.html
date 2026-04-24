@@ -144,11 +144,10 @@
     </div>
   </main>
 
-  <footer>🔒 Демо-режим. Данные хранятся в браузере.</footer>
 
   <script>
     const DB = {
-       { users: [], polls: [], votes: [], news: [] },
+      data: { users: [], polls: [], votes: [], news: [] },
       init() {
         try { const s = localStorage.getItem('sv_app_data'); if (s) this.data = JSON.parse(s); } catch {}
         if (!this.data.users.some(u => u.login === 'admin')) {
@@ -162,11 +161,18 @@
     let currentUser = null;
     let currentPollId = null;
 
+    // ✅ ИСПРАВЛЕННАЯ НАВИГАЦИЯ
     function switchTab(tab) {
+      // Скрываем все основные экраны
       ['polls-screen', 'news-screen', 'profile-screen'].forEach(id => document.getElementById(id).classList.add('hidden'));
+      // Показываем нужный
       document.getElementById(`${tab}-screen`).classList.remove('hidden');
+      // Обновляем активную вкладку
       document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-      document.getElementById(`btn-${tab}`).classList.add('active');
+      document.getElementById(`btn-${tab}`)?.classList.add('active');
+      // Всегда показываем верхнее меню при переключении вкладок
+      document.getElementById('main-nav').classList.remove('hidden');
+      // Загружаем контент
       if (tab === 'polls') renderPolls();
       if (tab === 'news') renderNews();
       if (tab === 'profile') loadProfile();
@@ -176,7 +182,8 @@
     function showScreen(id) {
       document.querySelectorAll('main > div').forEach(d => d.classList.add('hidden'));
       document.getElementById(id).classList.remove('hidden');
-      document.getElementById('main-nav').classList.toggle('hidden', id !== 'auth-screen' && id !== 'create-screen' && id !== 'vote-screen');
+      // Скрываем меню только в подэкранах
+      document.getElementById('main-nav').classList.toggle('hidden', id === 'create-screen' || id === 'vote-screen');
     }
 
     function showMsg(text, type) {
@@ -204,7 +211,7 @@
       const u = DB.data.users.find(x => x.login === l && x.pass === p);
       if (u) {
         currentUser = u; localStorage.setItem('sv_current_user', JSON.stringify(u));
-        showScreen('polls-screen'); switchTab('polls');
+        switchTab('polls');
       } else showMsg('❌ Неверный логин или пароль', 'error');
     }
 
@@ -220,7 +227,7 @@
 
     function logout() {
       currentUser = null; localStorage.removeItem('sv_current_user');
-      showScreen('auth-screen');
+      showScreen('auth-screen'); document.getElementById('main-nav').classList.add('hidden');
     }
 
     function resetApp() {
@@ -375,7 +382,7 @@
         const s = localStorage.getItem('sv_current_user');
         if (s) {
           currentUser = JSON.parse(s);
-          if (DB.data.users.some(u => u.id === currentUser.id)) { showScreen('polls-screen'); switchTab('polls'); }
+          if (DB.data.users.some(u => u.id === currentUser.id)) switchTab('polls');
           else localStorage.removeItem('sv_current_user');
         }
       } catch {}
