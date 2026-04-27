@@ -1,107 +1,304 @@
-    // === СОЗДАНИЕ СОБЫТИЯ (ИСПРАВЛЕНО) ===
-    const createEvent = async () => {
-      const titleEl = $('event-title');
-      const dateEl = $('event-date');
-      const timeEl = $('event-time');
-      const descEl = $('event-desc');
-
-      const title = titleEl.value.trim();
-      const date = dateEl.value;
-      const time = timeEl.value;
-      const desc = descEl.value.trim();
-
-      if (!title || !date) {
-        return showMsg('Введите название и дату', 'error');
-      }
-
-      try {
-        // Блокируем кнопку во время загрузки
-        $('btn-create-event').textContent = 'Сохранение...';
-        
-        await addDoc(collection(db, "events"), { 
-          title, 
-          date, 
-          time, 
-          desc, 
-          createdBy: currentUser.id, 
-          createdAt: serverTimestamp() 
-        });
-
-        // Очищаем поля
-        titleEl.value = '';
-        dateEl.value = '';
-        timeEl.value = '';
-        descEl.value = '';
-        
-        showNotification('📅 Событие добавлено!');
-        // Принудительно обновляем вид (на случай если onSnapshot запаздывает)
-        renderCalendar(); 
-        
-      } catch (e) {
-        console.error("Ошибка создания:", e);
-        showMsg('Ошибка: ' + e.message, 'error');
-      } finally {
-        $('btn-create-event').textContent = '+ Добавить событие';
-      }
-    };
-
-    // === КАЛЕНДАРЬ (ИСПРАВЛЕНО: Сравнение строк вместо дат) ===
-    const renderCalendar = () => {
-      const year = currentMonth.getFullYear();
-      const month = currentMonth.getMonth(); // 0-11
-      
-      // Формируем префикс месяца, например "2023-10-"
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Совет Обучающихся</title>
+  <style>
+    :root { --primary: #4f46e5; --primary-hover: #4338ca; --bg: #f8fafc; --card: #fff; --text: #0f172a; --muted: #64748b; --radius: 14px; --shadow: 0 4px 12px rgba(0,0,0,0.06); --border: #e2e8f0; --success: #10b981; --danger: #ef4444; --warning: #f59e0b; }
+    [data-theme="dark"] { --bg: #0f172a; --card: #1e293b; --text: #f1f5f9; --muted: #94a3b8; --border: #334155; }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, sans-serif; }
+    body { background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; }
+    .hidden { display: none !important; }
+    header { background: var(--primary); color: white; padding: 0.8rem 1rem; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    .header-left { display: flex; align-items: center; gap: 12px; }
+    .app-logo { width: 40px; height: 40px; border-radius: 8px; background: white; }
+    header h1 { font-size: 1.1rem; font-weight: 600; }
+    .icon-btn { background: rgba(255,255,255,0.2); border: none; color: white; width: 36px; height: 36px; border-radius: 8px; cursor: pointer; font-size: 1.1rem; display: flex; align-items: center; justify-content: center; }
+    .icon-btn:hover { background: rgba(255,255,255,0.3); }
+    .header-nav { display: flex; gap: 0.3rem; overflow-x: auto; background: var(--primary); padding: 0.5rem 1rem; }
+    .tab-btn { background: transparent; border: 1px solid rgba(255,255,255,0.3); color: white; padding: 0.4rem 0.7rem; border-radius: 8px; cursor: pointer; font-size: 0.85rem; }
+    .tab-btn:hover { background: rgba(255,255,255,0.15); }
+    .tab-btn.active { background: white; color: var(--primary); border-color: white; font-weight: 600; }
+    main { flex: 1; padding: 1rem; max-width: 720px; margin: 0 auto; width: 100%; }
+    .card { background: var(--card); border-radius: var(--radius); padding: 1.5rem; box-shadow: var(--shadow); margin-bottom: 1rem; }
+    input, select, textarea { width: 100%; padding: 0.8rem; margin: 0.5rem 0 1rem; border: 1px solid var(--border); border-radius: 10px; font-size: 1rem; background: var(--card); color: var(--text); }
+    button { width: 100%; padding: 0.85rem; border: none; border-radius: 10px; background: var(--primary); color: white; font-size: 1rem; cursor: pointer; font-weight: 500; }
+    button:hover { background: var(--primary-hover); }
+    button.secondary { background: var(--border); color: var(--text); margin-top: 0.5rem; }
+    button.danger { background: var(--danger); }
+    button.success { background: var(--success); }
+    button.small { width: auto; padding: 0.4rem 0.8rem; font-size: 0.85rem; }
+    .list-item { background: var(--card); border-radius: var(--radius); padding: 1rem; margin-bottom: 0.8rem; box-shadow: var(--shadow); border-left: 4px solid var(--primary); cursor: pointer; position: relative; }
+    .list-item:hover { transform: translateY(-2px); }
+    .list-item.pinned { border-left-color: var(--warning); background: linear-gradient(to right, rgba(245,158,11,0.1), var(--card)); }
+    .news-card { background: var(--card); border-radius: var(--radius); padding: 1.2rem; margin-bottom: 0.8rem; box-shadow: var(--shadow); position: relative; }
+    .news-card.pinned { border: 2px solid var(--warning); }
+    .news-cover { width: 100%; max-height: 300px; object-fit: cover; border-radius: 8px; margin-bottom: 1rem; }
+    .news-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem; }
+    .news-meta { font-size: 0.75rem; color: var(--muted); display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+    .news-text { white-space: pre-wrap; line-height: 1.5; margin-bottom: 0.5rem; }
+    .action-btn { background: transparent; border: none; cursor: pointer; font-size: 1.1rem; padding: 4px 6px; border-radius: 6px; color: var(--muted); margin-left: 0.3rem; }
+    .action-btn:hover { background: var(--border); color: var(--primary); }
+    .action-btn.delete:hover { color: var(--danger); background: rgba(239,68,68,0.1); }
+    .badge { display: inline-block; padding: 0.2rem 0.5rem; border-radius: 99px; font-size: 0.7rem; font-weight: 700; margin-right: 0.3rem; }
+    .badge.admin { background: #fef3c7; color: #b45309; }
+    .badge.council { background: #dbeafe; color: #1d4ed8; }
+    .badge.voted { background: #d1fae5; color: #047857; }
+    .badge.draft { background: #e2e8f0; color: #475569; }
+    .badge.pinned { background: #fef3c7; color: #b45309; }
+    .alert { padding: 0.8rem; border-radius: 8px; margin-bottom: 1rem; font-size: 0.9rem; text-align: center; }
+    .alert.error { background: #fee2e2; color: #b91c1c; }
+    .alert.success { background: #d1fae5; color: #047857; }
+    footer { text-align: center; padding: 1rem; font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--border); }
+    #loading { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); z-index: 999; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; color: var(--primary); flex-direction: column; gap: 1rem; }
+    .spinner { width: 40px; height: 40px; border: 4px solid var(--border); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .search-bar { margin-bottom: 1rem; display: flex; gap: 0.5rem; }
+    .search-bar input { margin: 0; flex: 1; }
+    .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 1rem; }
+    .modal-content { background: var(--card); border-radius: var(--radius); padding: 1.5rem; max-width: 500px; width: 100%; max-height: 90vh; overflow-y: auto; }
+    .notification-toast { position: fixed; bottom: 1rem; right: 1rem; background: var(--card); color: var(--text); padding: 1rem; border-radius: var(--radius); box-shadow: 0 4px 12px rgba(0,0,0,0.2); z-index: 1001; max-width: 300px; animation: slideIn 0.3s ease; border: 1px solid var(--border); }
+    @keyframes slideIn { from { transform: translateX(400px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+    .comment { background: var(--bg); padding: 0.8rem; border-radius: 8px; margin-bottom: 0.5rem; }
+    .comment-header { display: flex; justify-content: space-between; margin-bottom: 0.3rem; font-size: 0.85rem; }
+    .comment-author { font-weight: 600; color: var(--primary); }
+    .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.3rem; margin-top: 1rem; }
+    .calendar-day { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; background: var(--border); border-radius: 8px; font-size: 0.85rem; cursor: pointer; }
+    .calendar-day:hover { background: var(--primary); color: white; }
+    .calendar-day.has-event { background: var(--primary); color: white; font-weight: bold; }
+    .calendar-day.today { border: 2px solid var(--warning); }
+    .checkbox-option { display: flex; align-items: center; padding: 0.8rem; background: var(--border); border-radius: 8px; margin-bottom: 0.5rem; cursor: pointer; }
+    .checkbox-option input { margin: 0; margin-right: 0.8rem; width: auto; }
+    .scale-options { display: flex; justify-content: space-between; gap: 0.5rem; margin: 1rem 0; }
+    .scale-option { flex: 1; text-align: center; padding: 0.8rem; background: var(--border); border-radius: 8px; cursor: pointer; }
+    .scale-option.selected { background: var(--primary); color: white; }
+    .file-input-wrapper { position: relative; overflow: hidden; display: inline-block; width: 100%; }
+    .file-input-wrapper input[type=file] { position: absolute; left: -9999px; }
+    .file-input-label { display: block; padding: 0.8rem; background: var(--bg); border: 2px dashed var(--border); border-radius: 10px; text-align: center; cursor: pointer; transition: 0.2s; }
+    .file-input-label:hover { border-color: var(--primary); background: rgba(79,70,229,0.05); }
+    .image-preview { max-width: 100%; max-height: 200px; border-radius: 8px; margin-top: 0.5rem; display: none; }
+    .image-preview.show { display: block; }
+    .remove-image { background: var(--danger); color: white; border: none; padding: 0.3rem 0.6rem; border-radius: 6px; cursor: pointer; font-size: 0.85rem; margin-top: 0.5rem; }
+  </style>
+</head>
+<body>
+  <div id="loading"><div class="spinner"></div><div>Подключение...</div></div>
+  <header>
+    <div class="header-left">
+      <img src="https://cdn-icons-png.flaticon.com/512/2997/2997283.png" alt="Logo" class="app-logo">
+      <h1>Совет Обучающихся</h1>
+    </div>
+    <div class="header-controls">
+      <button class="icon-btn" onclick="toggleTheme()" title="Тема">🌓</button>
+      <button class="icon-btn" onclick="toggleNotifications()" title="Уведомления">🔔</button>
+      <button class="icon-btn" onclick="logout()" title="Выйти">🚪</button>
+    </div>
+  </header>
+  <nav class="header-nav hidden" id="main-nav">
+    <button class="tab-btn active" id="btn-polls" onclick="switchTab('polls')">📊 Опросы</button>
+    <button class="tab-btn" id="btn-news" onclick="switchTab('news')">📰 Новости</button>
+    <button class="tab-btn" id="btn-calendar" onclick="switchTab('calendar')">📅 Календарь</button>
+    <button class="tab-btn" id="btn-profile" onclick="switchTab('profile')">👤 Профиль</button>
+  </nav>
+  <main>
+    <div id="auth-screen">
+      <div class="card">
+        <h2 style="margin-bottom: 1rem;">Вход в систему</h2>
+        <input id="auth-login" placeholder="Логин" autocomplete="off">
+        <input id="auth-pass" type="password" placeholder="Пароль" autocomplete="off">
+        <select id="auth-class"><option value="">Выберите класс</option><option value="5">5 класс</option><option value="6">6 класс</option><option value="7">7 класс</option><option value="8">8 класс</option><option value="9">9 класс</option><option value="10">10 класс</option><option value="11">11 класс</option></select>
+        <button onclick="handleAuth()">Войти</button>
+        <hr style="margin: 1.5rem 0; border: 0; border-top: 1px solid var(--border);">
+        <h3>Регистрация (только члены совета)</h3>
+        <input id="reg-login" placeholder="Придумайте логин" autocomplete="off">
+        <input id="reg-pass" type="password" placeholder="Придумайте пароль" autocomplete="off">
+        <select id="reg-class"><option value="">Ваш класс</option><option value="5">5 класс</option><option value="6">6 класс</option><option value="7">7 класс</option><option value="8">8 класс</option><option value="9">9 класс</option><option value="10">10 класс</option><option value="11">11 класс</option></select>
+        <button class="secondary" onclick="handleRegister()">Зарегистрироваться</button>
+        <div id="auth-msg"></div>
+      </div>
+    </div>
+    <div id="polls-screen" class="hidden">
+      <div class="search-bar"><input id="poll-search" placeholder="🔍 Поиск..." oninput="renderPolls()"><button class="small" onclick="prepareCreatePoll()" id="btn-create-poll" style="display:none;">+ Создать</button></div>
+      <div class="filter-tags" style="display:flex; gap:0.5rem; margin-bottom:1rem; flex-wrap:wrap;">
+        <div class="tab-btn" style="background:var(--border); color:var(--text);" onclick="setFilter('all', this)">Все</div>
+        <div class="tab-btn" style="background:var(--border); color:var(--text);" onclick="setFilter('active', this)">Активные</div>
+        <div class="tab-btn" style="background:var(--border); color:var(--text);" onclick="setFilter('draft', this)">Черновики</div>
+      </div>
+      <div id="polls-list"></div>
+    </div>
+    <div id="news-screen" class="hidden">
+      <div class="search-bar"><input id="news-search" placeholder="🔍 Поиск..." oninput="renderNews()"><button class="small" onclick="prepareCreateNews()" id="btn-create-news" style="display:none;">+ Добавить</button></div>
+      <div id="news-list"></div>
+    </div>
+    <div id="calendar-screen" class="hidden">
+      <div class="card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;"><h2 id="calendar-month">Месяц</h2><div><button class="small" onclick="changeMonth(-1)" style="width:auto;">←</button><button class="small" onclick="changeMonth(1)" style="width:auto;">→</button></div></div>
+        <div style="display:grid; grid-template-columns:repeat(7,1fr); gap:0.3rem; text-align:center; font-weight:bold; color:var(--muted); margin-bottom:0.5rem;"><div>Пн</div><div>Вт</div><div>Ср</div><div>Чт</div><div>Пт</div><div>Сб</div><div>Вс</div></div>
+        <div class="calendar-grid" id="calendar-grid"></div>
+      </div>
+      <div id="events-list"></div>
+      <button onclick="showScreen('create-event-screen')" id="btn-create-event" class="hidden" style="margin-top:1rem;">+ Добавить событие</button>
+    </div>
+    <div id="profile-screen" class="hidden">
+      <div class="card">
+        <div style="display:flex; gap:1rem; align-items:center; margin-bottom:1.5rem;">
+          <div style="width:70px; height:70px; border-radius:50%; background:var(--primary); display:flex; align-items:center; justify-content:center; font-size:1.5rem; font-weight:bold; color:white;" id="profile-avatar"></div>
+          <div><h2 id="profile-name"></h2><span id="profile-role" class="badge"></span><span id="profile-class" class="badge" style="background:var(--border); color:var(--text);"></span></div>
+        </div>
+        <div style="background:var(--bg); padding:1rem; border-radius:10px; margin-bottom:1rem;"><p>📊 Статистика:</p><p>• Проголосовано: <strong id="stat-voted">0</strong></p><p>• Создано опросов: <strong id="stat-created">0</strong></p></div>
+        <input id="display-name" placeholder="Отображаемое имя"><button onclick="saveProfile()">Сохранить</button>
+      </div>
+    </div>
+    <div id="create-poll-screen" class="hidden">
+      <div class="card">
+        <button onclick="cancelEditPoll()" class="secondary" style="width:auto; margin-bottom:1rem;">← Назад</button>
+        <h2 id="poll-form-title">Новый опрос</h2>
+        <input id="poll-title" placeholder="Тема опроса"><textarea id="poll-desc" rows="3" placeholder="Описание"></textarea>
+        <label style="display:block; margin:1rem 0 0.5rem; font-weight:600;">Тип вопроса:</label>
+        <select id="poll-type" onchange="updatePollTypeUI()"><option value="single">Один вариант</option><option value="multiple">Несколько вариантов</option><option value="scale">Шкала 1-10</option><option value="text">Текстовый ответ</option></select>
+        <div id="options-container"></div>
+        <button onclick="addOption()" class="secondary" id="btn-add-option">+ Добавить вариант</button>
+        <input id="poll-deadline" type="datetime-local" style="margin-top:1rem;">
+        <label style="display:flex; align-items:center; gap:0.5rem; margin:1rem 0;"><input type="checkbox" id="poll-draft" style="width:auto; margin:0;"> Сохранить как черновик</label>
+        <label style="display:block; margin:1rem 0 0.5rem; font-weight:600;">Доступно для классов:</label>
+        <select id="poll-class-restriction" multiple style="height:100px;"><option value="all" selected>Все классы</option><option value="5">5 класс</option><option value="6">6 класс</option><option value="7">7 класс</option><option value="8">8 класс</option><option value="9">9 класс</option><option value="10">10 класс</option><option value="11">11 класс</option></select>
+        <label style="display:block; margin:1rem 0 0.5rem; font-weight:600;">Обложка (URL):</label><input id="poll-cover" placeholder="https://...">
+        <button onclick="savePoll()" id="btn-save-poll">Опубликовать</button>
+      </div>
+    </div>
+    <div id="create-news-screen" class="hidden">
+      <div class="card">
+        <button onclick="cancelEditNews()" class="secondary" style="width:auto; margin-bottom:1rem;">← Назад</button>
+        <h2 id="news-form-title">Новая новость</h2>
+        <input id="news-title" placeholder="Заголовок"><textarea id="news-content" rows="6" placeholder="Текст новости..."></textarea>
+        <label style="display:block; margin:1rem 0 0.5rem; font-weight:600;">Обложка:</label>
+        <div class="file-input-wrapper">
+          <input type="file" id="news-file" accept="image/*" onchange="handleFileSelect(event)">
+          <label for="news-file" class="file-input-label">📁 Выберите файл или перетащите сюда</label>
+        </div>
+        <img id="news-preview" class="image-preview">
+        <button id="remove-image-btn" class="remove-image hidden" onclick="removeImage()">❌ Удалить фото</button>
+        <input id="news-cover" placeholder="Или вставьте ссылку на изображение" style="margin-top:0.5rem;">
+        <label style="display:flex; align-items:center; gap:0.5rem; margin:1rem 0;"><input type="checkbox" id="news-pin" style="width:auto; margin:0;"> Закрепить сверху</label>
+        <button onclick="saveNews()" id="btn-save-news">Опубликовать</button>
+      </div>
+    </div>
+    <div id="create-event-screen" class="hidden">
+      <div class="card">
+        <button onclick="switchTab('calendar')" class="secondary" style="width:auto; margin-bottom:1rem;">← Назад</button>
+        <h2>Новое событие</h2>
+        <input id="event-title" placeholder="Название"><input id="event-date" type="date"><input id="event-time" type="time"><textarea id="event-desc" rows="3" placeholder="Описание"></textarea>
+        <button onclick="createEvent()">Добавить</button>
+      </div>
+    </div>
+    <div id="vote-screen" class="hidden">
+      <div class="card">
+        <button onclick="closeVoteScreen()" class="secondary" style="width:auto; margin-bottom:1rem;">← Назад</button>
+        <img id="vote-cover" class="news-cover hidden" style="max-height:200px;">
+        <h2 id="vote-title"></h2><p id="vote-desc" style="color:var(--muted); margin:0.5rem 0 1rem;"></p>
+        <div id="vote-options"></div>
+        <button id="vote-submit" onclick="submitVote()">Отправить голос</button>
+        <div id="vote-result" class="hidden" style="margin-top:1rem;"></div>
+        <button id="show-qr-btn" onclick="showQRCode()" class="secondary" style="margin-top:1rem;">📱 Показать QR</button>
+      </div>
+    </div>
+    <div id="qr-modal" class="modal hidden" onclick="if(event.target===this)closeQRCode()"><div class="modal-content" style="text-align:center;"><h3>QR-код</h3><div id="qr-container" style="width:200px; height:200px; background:white; margin:1rem auto; display:flex; align-items:center; justify-content:center;"></div><button onclick="closeQRCode()">Закрыть</button></div></div>
+    <div id="comments-modal" class="modal hidden" onclick="if(event.target===this)closeComments()"><div class="modal-content"><h3>💬 Комментарии</h3><div id="comments-list" style="max-height:300px; overflow-y:auto; margin:1rem 0;"></div><textarea id="comment-text" rows="3" placeholder="Ваш комментарий..."></textarea><button onclick="addComment()">Отправить</button><button class="secondary" onclick="closeComments()">Закрыть</button></div></div>
+  </main>
+  <footer>☁️ v2.7 • Календарь исправлен</footer>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, collection, addDoc, getDocs, query, where, onSnapshot, deleteDoc, doc, setDoc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
+    const firebaseConfig = { apiKey: "AIzaSyDyknZgiqiqwOMpRdU3CEZ6GCkSUr3Q_Os", authDomain: "schoolcouncil-403cc.firebaseapp.com", projectId: "schoolcouncil-403cc", storageBucket: "schoolcouncil-403cc.firebasestorage.app", messagingSenderId: "429493844033", appId: "1:429493844033:web:72c9053947bacf8ecceec0" };
+    const app = initializeApp(firebaseConfig), db = getFirestore(app), storage = getStorage(app);
+    let currentUser = null, currentPollId = null, allPolls = [], allVotes = [], allNews = [], allEvents = [], allComments = [], currentFilter = 'all', currentMonth = new Date(), notificationsEnabled = false, editingPollId = null, editingNewsId = null, currentNewsIdForComments = null, selectedFile = null;
+    const $ = id => document.getElementById(id), $$ = (sel, ctx = document) => ctx.querySelectorAll(sel);
+    const hideAll = () => ['auth-screen','polls-screen','news-screen','calendar-screen','profile-screen','create-poll-screen','create-news-screen','create-event-screen','vote-screen'].forEach(id => $(id).classList.add('hidden'));
+    const showScreen = id => { hideAll(); $(id).classList.remove('hidden'); $('main-nav').classList.toggle('hidden', id.includes('create-') || id === 'vote-screen'); };
+    const showMsg = (text, type) => { const el = $('auth-msg'); el.textContent = text; el.className = `alert ${type}`; setTimeout(() => el.textContent = '', 3000); };
+    const showNotification = text => { const toast = document.createElement('div'); toast.className = 'notification-toast'; toast.textContent = text; document.body.appendChild(toast); setTimeout(() => toast.remove(), 3000); if (notificationsEnabled && Notification.permission === 'granted') new Notification('Совет', { body: text }); };
+    const switchTab = tab => { hideAll(); $(`${tab}-screen`).classList.remove('hidden'); $$('.tab-btn').forEach(b => b.classList.remove('active')); $(`btn-${tab}`)?.classList.add('active'); $('main-nav').classList.remove('hidden'); if (tab === 'polls') renderPolls(); if (tab === 'news') renderNews(); if (tab === 'calendar') renderCalendar(); if (tab === 'profile') loadProfile(); };
+    const handleAuth = async () => { const l = $('auth-login').value.trim(), p = $('auth-pass').value, cls = $('auth-class').value; if (!l || !p) return showMsg('Введите логин и пароль', 'error'); const snap = await getDocs(query(collection(db, "users"), where("login", "==", l), where("pass", "==", p))); if (!snap.empty) { currentUser = { ...snap.docs[0].data(), id: snap.docs[0].id }; if (cls && !currentUser.className) await updateDoc(doc(db, "users", currentUser.id), { className: cls }); currentUser.className = cls || currentUser.className; localStorage.setItem('sv_user_session', JSON.stringify(currentUser)); $('auth-screen').classList.add('hidden'); $('main-nav').classList.remove('hidden'); switchTab('polls'); showMsg('✅ Вход выполнен!', 'success'); } else showMsg('❌ Неверный логин или пароль', 'error'); };
+    const handleRegister = async () => { const l = $('reg-login').value.trim(), p = $('reg-pass').value, cls = $('reg-class').value; if (!l || !p) return showMsg('Заполните все поля', 'error'); if (!(await getDocs(query(collection(db, "users"), where("login", "==", l)))).empty) return showMsg('Логин занят', 'error'); await addDoc(collection(db, "users"), { login: l, pass: p, role: "council", displayName: l, className: cls, createdAt: serverTimestamp() }); showMsg('✅ Аккаунт создан! Войдите.', 'success'); $('reg-login').value = ''; $('reg-pass').value = ''; };
+    const logout = () => { currentUser = null; localStorage.removeItem('sv_user_session'); hideAll(); $('auth-screen').classList.remove('hidden'); $('main-nav').classList.add('hidden'); };
+    const applySession = () => { if (currentUser) { $('auth-screen').classList.add('hidden'); $('main-nav').classList.remove('hidden'); switchTab('polls'); } else { hideAll(); $('auth-screen').classList.remove('hidden'); $('main-nav').classList.add('hidden'); } };
+    const initApp = async () => { try { document.documentElement.setAttribute('data-theme', localStorage.getItem('theme') || 'light'); const usersRef = collection(db, "users"); if ((await getDocs(query(usersRef, where("login", "==", "admin")))).empty) await setDoc(doc(usersRef, "admin_01"), { login: "admin", pass: "admin123", role: "admin", displayName: "Администратор", className: "", createdAt: serverTimestamp() }); onSnapshot(collection(db, "polls"), snap => { allPolls = snap.docs.map(d => ({id: d.id, ...d.data()})); renderPolls(); }); onSnapshot(collection(db, "votes"), snap => { allVotes = snap.docs.map(d => d.data()); renderPolls(); }); onSnapshot(collection(db, "news"), snap => { allNews = snap.docs.map(d => ({id: d.id, ...d.data()})); renderNews(); }); onSnapshot(collection(db, "events"), snap => { allEvents = snap.docs.map(d => ({id: d.id, ...d.data()})); renderCalendar(); }); onSnapshot(collection(db, "comments"), snap => { allComments = snap.docs.map(d => ({id: d.id, ...d.data()})); if (currentNewsIdForComments !== null) showComments(currentNewsIdForComments); }); const saved = localStorage.getItem('sv_user_session'); if (saved) { currentUser = JSON.parse(saved); applySession(); } else showScreen('auth-screen'); $('loading').classList.add('hidden'); } catch (e) { console.error(e); $('loading').innerHTML = `❌ Ошибка: ${e.message}<br><button onclick="location.reload()">Повторить</button>`; } };
+    const handleFileSelect = event => { const file = event.target.files[0]; if (file) { if (!file.type.startsWith('image/')) return showMsg('Выберите изображение', 'error'); if (file.size > 5 * 1024 * 1024) return showMsg('Файл больше 5MB', 'error'); selectedFile = file; const reader = new FileReader(); reader.onload = e => { const preview = $('news-preview'); preview.src = e.target.result; preview.classList.add('show'); $('remove-image-btn').classList.remove('hidden'); $('news-cover').value = ''; }; reader.readAsDataURL(file); } };
+    const removeImage = () => { selectedFile = null; $('news-preview').src = ''; $('news-preview').classList.remove('show'); $('remove-image-btn').classList.add('hidden'); $('news-file').value = ''; };
+    const uploadFile = async file => { if (!file) return null; const fileRef = ref(storage, `news/${Date.now()}_${file.name}`); await uploadBytes(fileRef, file); return await getDownloadURL(fileRef); };
+    const prepareCreatePoll = () => { editingPollId = null; $('poll-form-title').textContent = 'Новый опрос'; $('btn-save-poll').textContent = 'Опубликовать'; $('poll-title').value = ''; $('poll-desc').value = ''; $('poll-type').value = 'single'; $('poll-deadline').value = ''; $('poll-draft').checked = false; $('poll-cover').value = ''; $('options-container').innerHTML = '<input class="poll-opt" placeholder="Вариант 1"><input class="poll-opt" placeholder="Вариант 2">'; $('btn-add-option').classList.remove('hidden'); $('poll-class-restriction').value = 'all'; showScreen('create-poll-screen'); };
+    const startEditPoll = id => { const p = allPolls.find(x => x.id === id); if (!p) return; editingPollId = id; $('poll-form-title').textContent = 'Редактирование опроса'; $('btn-save-poll').textContent = 'Сохранить изменения'; $('poll-title').value = p.title; $('poll-desc').value = p.desc || ''; $('poll-type').value = p.type || 'single'; $('poll-cover').value = p.cover || ''; $('poll-draft').checked = p.isDraft === true; if (p.deadline) { const d = new Date(p.deadline); $('poll-deadline').value = new Date(d - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16); } else $('poll-deadline').value = ''; const container = $('options-container'); container.innerHTML = ''; if (p.type === 'single' || p.type === 'multiple') { if (p.options) p.options.forEach(opt => container.innerHTML += `<input class="poll-opt" value="${opt.text}" placeholder="Вариант">`); $('btn-add-option').classList.remove('hidden'); } else { container.innerHTML = '<p style="color:var(--muted); font-size:0.9rem;">Варианты не требуются</p>'; $('btn-add-option').classList.add('hidden'); } const select = $('poll-class-restriction'); Array.from(select.options).forEach(opt => opt.selected = false); if (p.allowedClasses) p.allowedClasses.forEach(c => { const opt = Array.from(select.options).find(o => o.value === c); if (opt) opt.selected = true; }); showScreen('create-poll-screen'); };
+    const cancelEditPoll = () => { editingPollId = null; switchTab('polls'); };
+    const savePoll = async () => { const title = $('poll-title').value.trim(), desc = $('poll-desc').value.trim(), type = $('poll-type').value, deadline = $('poll-deadline').value, isDraft = $('poll-draft').checked, cover = $('poll-cover').value.trim(); if (!title) return alert('Введите название'); let options = []; if (type === 'single' || type === 'multiple') { options = [...$$('.poll-opt')].map(i => i.value.trim()).filter(Boolean); if (options.length < 2) return alert('Минимум 2 варианта'); } const allowedClasses = Array.from($('poll-class-restriction').selectedOptions).map(o => o.value); const pollData = { title, desc, type, deadline: deadline || null, options: options.map((t, i) => ({ id: `o_${i}`, text: t, votes: 0 })), isDraft, cover, allowedClasses }; if (editingPollId) { await updateDoc(doc(db, "polls", editingPollId), pollData); showNotification('Опрос обновлён'); } else { pollData.pinned = false; pollData.createdBy = currentUser.id; pollData.createdAt = serverTimestamp(); await addDoc(collection(db, "polls"), pollData); showNotification('Опрос создан'); } editingPollId = null; switchTab('polls'); };
+    const togglePinPoll = async id => { const poll = allPolls.find(p => p.id === id); if (!poll) return; await updateDoc(doc(db, "polls", id), { pinned: !poll.pinned }); };
+    const deletePoll = async id => { if (!confirm('Удалить опрос?')) return; await deleteDoc(doc(db, "polls", id)); (await getDocs(query(collection(db, "votes"), where("pollId", "==", id)))).forEach(async d => await deleteDoc(doc(db, "votes", d.id))); showNotification('Опрос удалён'); };
+    const renderPolls = () => { const list = $('polls-list'); list.innerHTML = ''; const search = $('poll-search')?.value.toLowerCase() || ''; let filtered = allPolls.filter(p => { const matchesSearch = p.title.toLowerCase().includes(search); const userClass = currentUser?.className || ''; const allowedClasses = p.allowedClasses || ['all']; const matchesClass = allowedClasses.includes('all') || allowedClasses.includes(userClass); let matchesFilter = true; if (currentFilter === 'active') matchesFilter = !p.isDraft && (!p.deadline || new Date(p.deadline) > new Date()); if (currentFilter === 'draft') matchesFilter = p.isDraft === true; return matchesSearch && matchesClass && matchesFilter; }); filtered.sort((a,b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0)); if (!filtered.length) { list.innerHTML = '<p style="text-align:center; color:var(--muted); margin-top:2rem;">Нет опросов</p>'; return; } filtered.forEach(p => { const voted = allVotes.some(v => v.pollId === p.id && v.userId === currentUser?.id); const isAdmin = currentUser?.role === 'admin'; const isDraft = p.isDraft === true; const isPinned = p.pinned === true; const card = document.createElement('div'); card.className = `list-item ${isPinned ? 'pinned' : ''}`; card.innerHTML = `${p.cover ? `<img src="${p.cover}" style="width:100%; max-height:150px; object-fit:cover; border-radius:8px; margin-bottom:0.5rem;">` : ''}<div style="display:flex; justify-content:space-between; align-items:flex-start;"><div style="flex:1;"><div style="display:flex; gap:0.3rem; margin-bottom:0.3rem; flex-wrap:wrap;">${isPinned ? '<span class="badge pinned">📌</span>' : ''}${isDraft ? '<span class="badge draft">Черновик</span>' : ''}${voted ? '<span class="badge voted">✅</span>' : ''}</div><strong>${p.title}</strong>${p.desc ? `<p style="color:var(--muted); font-size:0.9rem;">${p.desc}</p>` : ''}</div><div style="display:flex; gap:0.3rem;">${isAdmin ? `<button class="action-btn" onclick="event.stopPropagation(); startEditPoll('${p.id}')" title="Редактировать">✏️</button>` : ''}${isAdmin ? `<button class="action-btn" onclick="event.stopPropagation(); togglePinPoll('${p.id}')" title="Закрепить">📌</button>` : ''}${isAdmin ? `<button class="action-btn delete" onclick="event.stopPropagation(); deletePoll('${p.id}')" title="Удалить">🗑️</button>` : ''}</div></div>`; if (!isDraft) card.onclick = e => { if(!e.target.closest('.action-btn')) openPoll(p.id); }; list.appendChild(card); }); };
+    const prepareCreateNews = () => { editingNewsId = null; $('news-form-title').textContent = 'Новая новость'; $('btn-save-news').textContent = 'Опубликовать'; $('news-title').value = ''; $('news-content').value = ''; $('news-cover').value = ''; $('news-pin').checked = false; selectedFile = null; $('news-preview').src = ''; $('news-preview').classList.remove('show'); $('remove-image-btn').classList.add('hidden'); $('news-file').value = ''; showScreen('create-news-screen'); };
+    const startEditNews = id => { const n = allNews.find(x => x.id === id); if (!n) return; editingNewsId = id; $('news-form-title').textContent = 'Редактирование новости'; $('btn-save-news').textContent = 'Сохранить изменения'; $('news-title').value = n.title; $('news-content').value = n.content; $('news-cover').value = n.cover || ''; $('news-pin').checked = n.pinned === true; selectedFile = null; $('news-preview').src = ''; $('news-preview').classList.remove('show'); $('remove-image-btn').classList.add('hidden'); showScreen('create-news-screen'); };
+    const cancelEditNews = () => { editingNewsId = null; removeImage(); switchTab('news'); };
+    const saveNews = async () => { const title = $('news-title').value.trim(), content = $('news-content').value.trim(), urlCover = $('news-cover').value.trim(), pin = $('news-pin').checked; if (!title || !content) return alert('Заполните заголовок и текст'); let coverUrl = urlCover; if (selectedFile) { showNotification('📤 Загрузка фото...'); try { coverUrl = await uploadFile(selectedFile); } catch (e) { return showMsg('Ошибка загрузки: ' + e.message, 'error'); } } const newsData = { title, content, cover: coverUrl || null, pinned: pin }; if (editingNewsId) { await updateDoc(doc(db, "news", editingNewsId), newsData); showNotification('Новость обновлена'); } else { newsData.authorId = currentUser.id; newsData.createdAt = serverTimestamp(); await addDoc(collection(db, "news"), newsData); showNotification('Новость опубликована'); } editingNewsId = null; removeImage(); switchTab('news'); };
+    const deleteNews = async id => { if (!confirm('Удалить новость?')) return; await deleteDoc(doc(db, "news", id)); showNotification('Новость удалена'); };
+    const renderNews = () => { const list = $('news-list'); list.innerHTML = ''; const search = $('news-search')?.value.toLowerCase() || ''; let filtered = allNews.filter(n => n.title.toLowerCase().includes(search) || n.content.toLowerCase().includes(search)); filtered.sort((a, b) => { if (a.pinned && !b.pinned) return -1; if (!a.pinned && b.pinned) return 1; return (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0); }); if (!filtered.length) { list.innerHTML = '<p style="text-align:center; color:var(--muted); margin-top:2rem;">Нет новостей</p>'; return; } filtered.forEach(n => { const isAdmin = currentUser?.role === 'admin'; const date = n.createdAt?.seconds ? new Date(n.createdAt.seconds * 1000).toLocaleString('ru-RU') : ''; const isPinned = n.pinned === true; const commentCount = allComments.filter(c => c.newsId === n.id && c.approved !== false).length; const card = document.createElement('div'); card.className = `news-card ${isPinned ? 'pinned' : ''}`; card.innerHTML = `${n.cover ? `<img src="${n.cover}" class="news-cover">` : ''}<div class="news-header"><h3>${isPinned ? '📌 ' : ''}${n.title}</h3>${isAdmin ? `<div style="display:flex; gap:0.3rem;"><button class="action-btn" onclick="event.stopPropagation(); startEditNews('${n.id}')" title="Редактировать">✏️</button><button class="action-btn" onclick="event.stopPropagation(); updateDoc(doc(db,'news','${n.id}'), {pinned: !${n.pinned}})" title="Закрепить">📌</button><button class="action-btn delete" onclick="event.stopPropagation(); deleteNews('${n.id}')" title="Удалить">🗑️</button></div>` : ''}</div><div class="news-text">${n.content}</div><div class="news-meta"><span>📅 ${date}</span><button class="small" onclick="showComments('${n.id}')" style="width:auto; margin-left:auto; cursor:pointer;">💬 Комментарии (${commentCount})</button></div>`; list.appendChild(card); }); };
+    const showComments = newsId => { currentNewsIdForComments = newsId; const list = $('comments-list'); list.innerHTML = ''; const comments = allComments.filter(c => c.newsId === newsId).sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0)); if (!comments.length) { list.innerHTML = '<p style="color:var(--muted); text-align:center; padding:1rem;">Пока нет комментариев</p>'; } else { comments.forEach(c => { const isAdmin = currentUser?.role === 'admin'; const isPending = c.approved === undefined && currentUser?.role !== 'admin'; if (!isAdmin && c.approved === false) return; const div = document.createElement('div'); div.className = 'comment'; div.innerHTML = `<div class="comment-header"><span class="comment-author">${c.authorName || 'Аноним'}</span><span style="color:var(--muted);">${c.createdAt?.seconds ? new Date(c.createdAt.seconds * 1000).toLocaleString('ru-RU') : ''}</span></div><div>${c.text}</div>${c.approved === undefined && isAdmin ? `<div style="margin-top:0.5rem; display:flex; gap:0.5rem;"><button class="small success" onclick="moderateComment('${c.id}', true)" style="width:auto; flex:1;">✅ Одобрить</button><button class="small danger" onclick="moderateComment('${c.id}', false)" style="width:auto; flex:1;">❌ Отклонить</button></div>` : ''}${isPending ? '<div style="font-size:0.75rem; color:var(--warning); margin-top:0.5rem;">⏳ На модерации</div>' : ''}`; list.appendChild(div); }); } $('comments-modal').classList.remove('hidden'); };
+    const closeComments = () => { $('comments-modal').classList.add('hidden'); currentNewsIdForComments = null; };
+    const addComment = async () => { const text = $('comment-text').value.trim(); if (!text || !currentNewsIdForComments) return alert('Введите комментарий'); const needsModeration = currentUser?.role !== 'admin'; await addDoc(collection(db, "comments"), { newsId: currentNewsIdForComments, userId: currentUser.id, authorName: currentUser.displayName || currentUser.login, text, approved: needsModeration ? undefined : true, createdAt: serverTimestamp() }); $('comment-text').value = ''; showNotification(needsModeration ? 'Комментарий отправлен на модерацию' : 'Комментарий добавлен'); };
+    const moderateComment = async (id, approved) => { await updateDoc(doc(db, "comments", id), { approved }); showNotification(approved ? 'Комментарий опубликован' : 'Комментарий отклонён'); };
+    const updatePollTypeUI = () => { const type = $('poll-type').value, container = $('options-container'); if (type === 'scale' || type === 'text') { container.innerHTML = '<p style="color:var(--muted); font-size:0.9rem;">Варианты не требуются</p>'; $('btn-add-option').classList.add('hidden'); } else { if (!container.querySelector('.poll-opt')) container.innerHTML = '<input class="poll-opt" placeholder="Вариант 1"><input class="poll-opt" placeholder="Вариант 2">'; $('btn-add-option').classList.remove('hidden'); } };
+    const addOption = () => { const c = $('options-container'); if (c.querySelector('p')) c.innerHTML = ''; c.insertAdjacentHTML('beforeend', `<input class="poll-opt" placeholder="Вариант ${c.children.length + 1}">`); };
+    const openPoll = id => { currentPollId = id; const p = allPolls.find(x => x.id === id); if (!p) return; $('vote-title').textContent = p.title; $('vote-desc').textContent = p.desc || ''; const coverEl = $('vote-cover'); if (p.cover) { coverEl.src = p.cover; coverEl.classList.remove('hidden'); } else coverEl.classList.add('hidden'); const container = $('vote-options'); container.innerHTML = ''; $('vote-submit').style.display = 'block'; $('vote-submit').textContent = 'Отправить голос'; $('vote-result').classList.add('hidden'); const hasVoted = allVotes.some(v => v.pollId === id && v.userId === currentUser?.id); if (hasVoted) { showResults(p); $('vote-submit').style.display = 'none'; } else { if (p.type === 'single') { p.options?.forEach((o, i) => { const div = document.createElement('div'); div.className = 'list-item'; div.style.cursor = 'pointer'; div.innerHTML = `${o.text}`; div.onclick = () => { container.querySelectorAll('.list-item').forEach(x => x.style.borderColor = 'transparent'); div.style.borderColor = 'var(--primary)'; div.dataset.idx = i; }; container.appendChild(div); }); } else if (p.type === 'multiple') { p.options?.forEach((o, i) => { const label = document.createElement('label'); label.className = 'checkbox-option'; label.innerHTML = `<input type="checkbox" data-idx="${i}"><span>${o.text}</span>`; container.appendChild(label); }); } else if (p.type === 'scale') { const scaleDiv = document.createElement('div'); scaleDiv.className = 'scale-options'; for (let i = 1; i <= 10; i++) { const opt = document.createElement('div'); opt.className = 'scale-option'; opt.textContent = i; opt.onclick = () => { scaleDiv.querySelectorAll('.scale-option').forEach(x => x.classList.remove('selected')); opt.classList.add('selected'); opt.dataset.value = i; }; scaleDiv.appendChild(opt); } container.appendChild(scaleDiv); } else if (p.type === 'text') { container.innerHTML = '<textarea id="text-answer" rows="4" placeholder="Ваш ответ..."></textarea>'; } } showScreen('vote-screen'); };
+    const submitVote = async () => { const p = allPolls.find(x => x.id === currentPollId); if (!p) return; let selectedIndices = []; if (p.type === 'single') { const sel = document.querySelector('#vote-options .list-item[style*="border-color: var(--primary)"]'); if (!sel) return alert('Выберите вариант'); selectedIndices = [parseInt(sel.dataset.idx)]; } else if (p.type === 'multiple') { const checked = document.querySelectorAll('#vote-options input[type="checkbox"]:checked'); if (!checked.length) return alert('Выберите варианты'); selectedIndices = Array.from(checked).map(c => parseInt(c.dataset.idx)); } else if (p.type === 'scale') { const sel = document.querySelector('#vote-options .scale-option.selected'); if (!sel) return alert('Выберите оценку'); selectedIndices = [parseInt(sel.dataset.value) - 1]; } else if (p.type === 'text') { const text = $('text-answer').value.trim(); if (!text) return alert('Введите ответ'); selectedIndices = [text]; } const newOptions = [...(p.options || [])]; if (p.type !== 'text') selectedIndices.forEach(idx => { if (newOptions[idx]) newOptions[idx].votes = (newOptions[idx].votes || 0) + 1; }); await updateDoc(doc(db, "polls", currentPollId), { options: newOptions }); await addDoc(collection(db, "votes"), { pollId: currentPollId, userId: currentUser.id, optionIdx: p.type === 'text' ? selectedIndices[0] : selectedIndices, votedAt: serverTimestamp() }); showResults(p); $('vote-submit').style.display = 'none'; showNotification('Голос засчитан!'); };
+    const showResults = p => { const total = p.options?.reduce((s, o) => s + (o.votes || 0), 0) || 0; const container = $('vote-result'); container.classList.remove('hidden'); container.innerHTML = '<h3 style="margin-bottom:0.8rem;">📊 Результаты</h3>'; if (p.type === 'text') { allVotes.filter(v => v.pollId === p.id && typeof v.optionIdx === 'string').forEach(v => { container.innerHTML += `<div style="background:var(--bg); padding:0.8rem; border-radius:8px; margin-bottom:0.5rem;">${v.optionIdx}</div>`; }); } else if (p.type === 'scale') { const scaleVotes = allVotes.filter(v => v.pollId === p.id && Array.isArray(v.optionIdx)); const avg = scaleVotes.length ? (scaleVotes.reduce((s, v) => s + (v.optionIdx[0] + 1), 0) / scaleVotes.length).toFixed(1) : 0; container.innerHTML += `<div style="font-size:2rem; font-weight:bold; color:var(--primary); text-align:center; margin:1rem 0;">${avg} / 10</div>`; } else { p.options?.forEach(o => { const votes = o.votes || 0; const pct = total ? Math.round((votes / total) * 100) : 0; container.innerHTML += `<div style="margin-bottom:0.8rem;"><div style="display:flex; justify-content:space-between; font-size:0.9rem;"><strong>${o.text}</strong><span>${votes} (${pct}%)</span></div><div style="height:8px; background:var(--border); border-radius:4px; overflow:hidden;"><div style="height:100%; width:${pct}%; background:var(--primary);"></div></div></div>`; }); } };
+    const showQRCode = () => { const container = $('qr-container'); container.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(window.location.href.split('#')[0] + '?poll=' + currentPollId)}" style="width:100%; height:100%;">`; $('qr-modal').classList.remove('hidden'); };
+    const closeQRCode = () => { $('qr-modal').classList.add('hidden'); };
+    const closeVoteScreen = () => { currentPollId = null; switchTab('polls'); };
+    const setFilter = (f, el) => { currentFilter = f; $$('.filter-tags .tab-btn').forEach(t => { t.classList.remove('active'); t.style.background = 'var(--border)'; t.style.color = 'var(--text)'; }); el.classList.add('active'); el.style.background = 'var(--primary)'; el.style.color = 'white'; renderPolls(); };
+    const renderCalendar = () => { 
+      const year = currentMonth.getFullYear(), month = currentMonth.getMonth(); 
       const monthPrefix = `${year}-${String(month + 1).padStart(2, '0')}`;
-      
-      $('calendar-month').textContent = new Date(year, month).toLocaleString('ru-RU', { month: 'long', year: 'numeric' });
-      
-      const firstDay = new Date(year, month, 1);
-      const lastDay = new Date(year, month + 1, 0);
-      const startDay = firstDay.getDay() || 7; // Пн=1, Вс=7
-      const daysInMonth = lastDay.getDate();
-      
-      const grid = $('calendar-grid');
-      grid.innerHTML = '';
-      
-      // Пустые ячейки
-      for (let i = 1; i < startDay; i++) grid.innerHTML += '<div></div>';
-      
-      const today = new Date();
+      $('calendar-month').textContent = new Date(year, month).toLocaleString('ru-RU', { month: 'long', year: 'numeric' }); 
+      const firstDay = new Date(year, month, 1), lastDay = new Date(year, month + 1, 0); 
+      const startDay = firstDay.getDay() || 7, daysInMonth = lastDay.getDate(); 
+      const grid = $('calendar-grid'); grid.innerHTML = ''; 
+      for (let i = 1; i < startDay; i++) grid.innerHTML += '<div></div>'; 
+      const today = new Date(); 
       const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
-
-      for (let d = 1; d <= daysInMonth; d++) {
+      for (let d = 1; d <= daysInMonth; d++) { 
         const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-        
-        // Ищем события, дата которых начинается с "ГОД-МЕСЯЦ-ДЕНЬ"
         const dayEvents = allEvents.filter(e => e.date === dateStr);
         const hasEvent = dayEvents.length > 0;
         const isToday = dateStr === todayStr;
-
-        const div = document.createElement('div');
-        div.className = `calendar-day ${hasEvent ? 'has-event' : ''} ${isToday ? 'today' : ''}`;
-        div.textContent = d;
-        
-        if (hasEvent) {
-          div.onclick = () => {
-            alert(`События на ${d}.${month+1}:\n\n` + dayEvents.map(e => `• ${e.title} ${e.time ? '('+e.time+')' : ''}`).join('\n'));
-          };
-        }
-        grid.appendChild(div);
-      }
-
-      // Список событий внизу
-      const list = $('events-list');
-      list.innerHTML = '';
-      // Фильтруем события текущего месяца
-      const monthEvents = allEvents.filter(e => e.date.startsWith(monthPrefix));
-      
-      monthEvents.sort((a,b) => a.date.localeCompare(b.date) || (a.time||'').localeCompare(b.time||''));
-
-      if (monthEvents.length === 0) {
-        list.innerHTML = '<p style="text-align:center; color:var(--muted); padding:1rem;">Нет событий в этом месяце</p>';
-      } else {
-        monthEvents.forEach(e => {
-          list.innerHTML += `<div class="list-item"><strong>${e.title}</strong><div style="color:var(--muted); font-size:0.9rem;">📅 ${new Date(e.date).toLocaleDateString('ru-RU')} ${e.time ? '• 🕐 '+e.time : ''}</div></div>`;
-        });
-      }
+        const div = document.createElement('div'); 
+        div.className = `calendar-day ${hasEvent ? 'has-event' : ''} ${isToday ? 'today' : ''}`; 
+        div.textContent = d; 
+        div.onclick = () => { alert(dayEvents.length ? dayEvents.map(e => `${e.title}${e.time ? ' ('+e.time+')' : ''}`).join('\n') : 'Нет событий'); };
+        grid.appendChild(div); 
+      } 
+      const list = $('events-list'); list.innerHTML = ''; 
+      const monthEvents = allEvents.filter(e => e.date.startsWith(monthPrefix)).sort((a,b) => a.date.localeCompare(b.date) || (a.time||'').localeCompare(b.time||''));
+      if (!monthEvents.length) list.innerHTML = '<p style="text-align:center; color:var(--muted); padding:1rem;">Нет событий в этом месяце</p>';
+      else monthEvents.forEach(e => { list.innerHTML += `<div class="list-item"><strong>${e.title}</strong><div style="color:var(--muted); font-size:0.9rem;">📅 ${new Date(e.date).toLocaleDateString('ru-RU')} ${e.time ? '• 🕐 '+e.time : ''}</div></div>`; });
     };
+    const changeMonth = delta => { currentMonth.setMonth(currentMonth.getMonth() + delta); renderCalendar(); };
+    const createEvent = async () => {
+      try {
+        const title = $('event-title').value.trim(), date = $('event-date').value, time = $('event-time').value, desc = $('event-desc').value.trim();
+        if (!title || !date) return showMsg('Введите название и дату', 'error');
+        $('btn-create-event').textContent = 'Сохранение...';
+        await addDoc(collection(db, "events"), { title, date, time, desc, createdBy: currentUser.id, createdAt: serverTimestamp() });
+        $('event-title').value = ''; $('event-date').value = ''; $('event-time').value = ''; $('event-desc').value = '';
+        showNotification('📅 Событие добавлено');
+        renderCalendar();
+      } catch (e) { console.error(e); showMsg('Ошибка: ' + e.message, 'error'); }
+      finally { $('btn-create-event').textContent = '+ Добавить событие'; }
+    };
+    const loadProfile = () => { if (!currentUser) return; $('profile-name').textContent = currentUser.displayName || currentUser.login; $('profile-role').textContent = currentUser.role === 'admin' ? 'Администратор' : 'Член совета'; $('profile-role').className = `badge ${currentUser.role}`; $('profile-class').textContent = currentUser.className ? `${currentUser.className} класс` : ''; $('profile-avatar').textContent = (currentUser.displayName || currentUser.login).charAt(0).toUpperCase(); $('display-name').value = currentUser.displayName || ''; $('stat-voted').textContent = allVotes.filter(v => v.userId === currentUser.id).length; $('stat-created').textContent = allPolls.filter(p => p.createdBy === currentUser.id).length; };
+    const saveProfile = async () => { const name = $('display-name').value.trim(); if (!name || !currentUser) return; await updateDoc(doc(db, "users", currentUser.id), { displayName: name }); currentUser.displayName = name; localStorage.setItem('sv_user_session', JSON.stringify(currentUser)); loadProfile(); showNotification('Профиль обновлён'); };
+    const toggleTheme = () => { const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'; document.documentElement.setAttribute('data-theme', next); localStorage.setItem('theme', next); };
+    const toggleNotifications = async () => { if (!notificationsEnabled) { const perm = await Notification.requestPermission(); if (perm === 'granted') { notificationsEnabled = true; showNotification('Уведомления включены'); } } else { notificationsEnabled = false; showNotification('Уведомления выключены'); } };
+    window.handleAuth = handleAuth; window.handleRegister = handleRegister; window.logout = logout; window.switchTab = switchTab; window.showScreen = showScreen; window.addOption = addOption; window.updatePollTypeUI = updatePollTypeUI; window.savePoll = savePoll; window.submitVote = submitVote; window.deletePoll = deletePoll; window.saveNews = saveNews; window.deleteNews = deleteNews; window.saveProfile = saveProfile; window.toggleTheme = toggleTheme; window.toggleNotifications = toggleNotifications; window.setFilter = setFilter; window.changeMonth = changeMonth; window.createEvent = createEvent; window.showQRCode = showQRCode; window.closeQRCode = closeQRCode; window.closeVoteScreen = closeVoteScreen; window.addComment = addComment; window.closeComments = closeComments; window.moderateComment = moderateComment; window.prepareCreatePoll = prepareCreatePoll; window.prepareCreateNews = prepareCreateNews; window.startEditPoll = startEditPoll; window.startEditNews = startEditNews; window.cancelEditPoll = cancelEditPoll; window.cancelEditNews = cancelEditNews; window.togglePinPoll = togglePinPoll; window.showComments = showComments; window.handleFileSelect = handleFileSelect; window.removeImage = removeImage;
+    window.onload = () => { initApp(); const params = new URLSearchParams(window.location.search); const pollId = params.get('poll'); if (pollId) setTimeout(() => { const poll = allPolls.find(p => p.id === pollId); if (poll) openPoll(pollId); }, 2000); };
+  </script>
+</body>
+</html>
